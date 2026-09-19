@@ -5,8 +5,9 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { Layers, RotateCcw, Globe } from 'lucide-react';
-import { Zone, Incident, Resource, Hospital } from '@shared/types';
+import { Zone, Incident, Resource, Hospital, Route } from '@shared/types';
 import { mockService } from '../../services/mockService';
+import { routingService } from '../../services/routingService';
 import { createIncidentIcon, createResourceIcon, createHospitalIcon } from './mapIcons';
 import { MapLegend } from './MapLegend';
 import { MapDetailPanel, SelectedMapItem } from './MapDetailPanel';
@@ -14,29 +15,57 @@ import { useTheme } from '../../context/ThemeContext';
 import { useApp } from '../../context/AppContext';
 import { GoogleMapContainer } from './GoogleMapContainer';
 
-// Controller component for Reset View / Fit Trichy
-const FitCityBounds: React.FC<{ zones: Zone[] }> = ({ zones }) => {
+// India-Wide Geographical Center & Strict Bounds
+const INDIA_CENTER: L.LatLngTuple = [20.5937, 78.9629];
+const INDIA_SW: L.LatLngTuple = [6.0, 68.0];
+const INDIA_NE: L.LatLngTuple = [37.5, 97.5];
+const INDIA_BOUNDS = L.latLngBounds(INDIA_SW, INDIA_NE);
+
+const TRICHY_CENTER: L.LatLngTuple = [10.7905, 78.7047];
+
+// Controller component for Fit India / Fit Trichy / Reset View
+const MapControlButtons: React.FC<{ zones: Zone[] }> = ({ zones: _zones }) => {
   const map = useMap();
   
-  const fitBounds = () => {
-    if (!zones.length) {
-      map.setView([10.7905, 78.7047], 13);
-      return;
-    }
-    const allPoints = zones.flatMap((z) => z.polygon);
-    const bounds = L.latLngBounds(allPoints.map((pt) => [pt.lat, pt.lng]));
-    map.fitBounds(bounds, { padding: [35, 35] });
+  const fitIndia = () => {
+    map.setView(INDIA_CENTER, 5, { animate: true });
+  };
+
+  const fitTrichy = () => {
+    map.setView(TRICHY_CENTER, 13, { animate: true });
+  };
+
+  const resetView = () => {
+    map.setView(INDIA_CENTER, 5, { animate: true });
   };
 
   return (
-    <button
-      onClick={fitBounds}
-      className="flex items-center gap-1.5 px-2.5 py-1 bg-white/90 dark:bg-slate-900/90 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700/80 rounded-md text-xs font-sans font-medium shadow-md transition-colors"
-      title="Fit view to Tiruchirappalli city operational bounds"
-    >
-      <RotateCcw className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
-      <span>Fit Trichy</span>
-    </button>
+    <div className="flex items-center gap-1.5">
+      <button
+        onClick={fitIndia}
+        className="flex items-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-sans font-medium shadow-md transition-colors"
+        title="Zoom map view to India-wide emergency network overview"
+      >
+        <Globe className="w-3.5 h-3.5" />
+        <span>Fit India</span>
+      </button>
+
+      <button
+        onClick={fitTrichy}
+        className="flex items-center gap-1 px-2.5 py-1 bg-white/90 dark:bg-slate-900/90 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700/80 rounded-md text-xs font-sans font-medium shadow-md transition-colors"
+        title="Focus map view on Tiruchirappalli operational zone"
+      >
+        <span>Fit Trichy</span>
+      </button>
+
+      <button
+        onClick={resetView}
+        className="flex items-center gap-1 p-1 bg-white/90 dark:bg-slate-900/90 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700/80 rounded-md text-xs font-sans font-medium shadow-md transition-colors"
+        title="Reset map view to default India overview"
+      >
+        <RotateCcw className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+      </button>
+    </div>
   );
 };
 
@@ -60,11 +89,6 @@ const MapCenterController: React.FC<{ selectedItem: SelectedMapItem }> = ({ sele
 
   return null;
 };
-
-// Tiruchirappalli (Trichy) Strict Operational Geographical Bounds
-const TRICHY_SW: L.LatLngTuple = [10.6500, 78.5200];
-const TRICHY_NE: L.LatLngTuple = [10.9300, 78.8800];
-const TRICHY_BOUNDS = L.latLngBounds(TRICHY_SW, TRICHY_NE);
 
 // Custom Map Tap & Double-Tap Zoom Controller:
 // Single tap background -> Zoom OUT 1 level (around tap point)
@@ -191,6 +215,76 @@ export const CityOperationsMap: React.FC<CityOperationsMapProps> = ({
 
   // Selected map item state
   const [selectedItem, setSelectedItem] = useState<SelectedMapItem>(null);
+  const [roadRoutes, setRoadRoutes] = useState<Route[]>([]);
+
+  // Calculate real road routes for active resource assignments
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchActiveRoadRoutes = async () => {
+      const activePromises: Promise<Route>[] = [];
+
+      resources.forEach((res) => {
+        if (!res.location) return;
+
+        if (res.assignmentIncidentId) {
+          const inc = incidents.find((i) => i.id === res.assignmentIncidentId);
+          if (inc && inc.location) {
+            activePromises.push(
+              routingService.getRoute({
+                origin: res.location,
+                destination: inc.location,
+                resourceId: res.id,
+                incidentId: inc.id,
+                callSign: res.callSign,
+                targetTitle: inc.title,
+              })
+            );
+          }
+        } else if (res.destinationHospitalId) {
+          const hosp = hospitals.find((h) => h.id === res.destinationHospitalId);
+          if (hosp && hosp.location) {
+            activePromises.push(
+              routingService.getRoute({
+                origin: res.location,
+                destination: hosp.location,
+                resourceId: res.id,
+                hospitalId: hosp.id,
+                callSign: res.callSign,
+                targetTitle: hosp.name,
+              })
+            );
+          }
+        }
+      });
+
+      // Fallback to initial seed routes if no active assignments exist
+      if (activePromises.length === 0 && routes.length > 0) {
+        routes.forEach((r) => {
+          activePromises.push(
+            routingService.getRoute({
+              origin: r.origin,
+              destination: r.destination,
+              resourceId: r.resourceId,
+              incidentId: r.incidentId,
+              hospitalId: r.hospitalId,
+            })
+          );
+        });
+      }
+
+      const results = await Promise.all(activePromises);
+      if (isMounted) {
+        setRoadRoutes(results);
+      }
+    };
+
+    fetchActiveRoadRoutes();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [resources, incidents, hospitals, routes]);
 
   // Synchronize external selectedIncidentId into map selection
   useEffect(() => {
@@ -231,14 +325,14 @@ export const CityOperationsMap: React.FC<CityOperationsMapProps> = ({
   return (
     <div className="w-full h-full relative rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-[#070b14] overflow-hidden flex flex-col transition-colors">
       
-      {/* Real Trichy Geography Header & Provider Switcher */}
+      {/* India-Wide Geography Header & Provider Switcher */}
       <div className="absolute top-3 left-3 z-[1000] flex items-center gap-2 select-none">
         <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 px-3 py-1 rounded-md shadow-md text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span className="font-semibold text-slate-900 dark:text-white">Tiruchirappalli (Trichy)</span>
+          <span className="font-semibold text-slate-900 dark:text-white">India Emergency Network</span>
           <span className="text-slate-300 dark:text-slate-700">|</span>
           <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-            {provider === 'google' ? 'Google Maps' : 'Real GIS Map'}
+            {provider === 'google' ? 'Google Maps' : 'India GIS Feed'}
           </span>
         </div>
 
@@ -263,7 +357,7 @@ export const CityOperationsMap: React.FC<CityOperationsMapProps> = ({
         <GoogleMapContainer
           apiKey={googleApiKey}
           center={{ lat: stats.center.lat, lng: stats.center.lng }}
-          zoom={13}
+          zoom={5}
           zones={zones}
           incidents={incidents}
           resources={resources}
@@ -278,14 +372,14 @@ export const CityOperationsMap: React.FC<CityOperationsMapProps> = ({
           theme={theme}
         />
       ) : (
-        /* RENDER REAL TRICHY LEAFLET MAP PROVIDER (WITH SCROLLWHEELZOOM DISABLED TO FIX PAGE SCROLL BUG) */
+        /* RENDER INDIA LEAFLET MAP PROVIDER */
         <div className="w-full h-full relative">
           <MapContainer
-            center={[stats.center.lat, stats.center.lng]}
-            zoom={13}
-            minZoom={11}
+            center={INDIA_CENTER}
+            zoom={5}
+            minZoom={4}
             maxZoom={18}
-            maxBounds={TRICHY_BOUNDS}
+            maxBounds={INDIA_BOUNDS}
             maxBoundsViscosity={1.0}
             scrollWheelZoom={false}
             doubleClickZoom={false}
@@ -300,8 +394,8 @@ export const CityOperationsMap: React.FC<CityOperationsMapProps> = ({
               onClick={(e) => e.stopPropagation()}
               onDoubleClick={(e) => e.stopPropagation()}
             >
-              {/* Fit City Control */}
-              <FitCityBounds zones={zones} />
+              {/* Map View Navigation Controls */}
+              <MapControlButtons zones={zones} />
 
               {/* Layer Controls Dropdown/Strip */}
               <div className="flex items-center gap-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-300 dark:border-slate-700/80 rounded-md px-2.5 py-1 font-sans text-xs shadow-md text-slate-700 dark:text-slate-300">
@@ -396,22 +490,90 @@ export const CityOperationsMap: React.FC<CityOperationsMapProps> = ({
               </>
             )}
 
-            {/* 2. Route Layer */}
+            {/* 2. Route Layer (Real Road OSRM Routes with Fallback Handling) */}
             {layers.routes && (
               <>
-                {routes.map((route) => {
-                  const positions = route.waypoints.map((pt) => [pt.lat, pt.lng] as [number, number]);
+                {roadRoutes.map((route) => {
+                  let positions = route.waypoints.map((pt) => [pt.lat, pt.lng] as [number, number]);
+                  const isFallback = route.routingStatus === 'FALLBACK' || route.isSimulated;
+
+                  // Trim start coordinate so route line connects at the outer border of the resource icon (not inside its center)
+                  if (positions.length >= 2) {
+                    const [lat0, lng0] = positions[0];
+                    const [lat1, lng1] = positions[1];
+                    const dLat = lat1 - lat0;
+                    const dLng = lng1 - lng0;
+                    const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+
+                    if (dist > 0) {
+                      const offsetDeg = 0.00025; // ~20px offset at operational zoom
+                      const actualOffset = Math.min(offsetDeg, dist * 0.4);
+                      positions = [
+                        [lat0 + (dLat / dist) * actualOffset, lng0 + (dLng / dist) * actualOffset],
+                        ...positions.slice(1),
+                      ];
+                    }
+                  }
+
                   return (
-                    <Polyline
-                      key={route.id}
-                      positions={positions}
-                      pathOptions={{
-                        color: route.blocked ? '#ef4444' : '#3b82f6',
-                        weight: 3.5,
-                        opacity: 0.85,
-                        dashArray: route.blocked ? '6, 6' : undefined,
-                      }}
-                    />
+                    <React.Fragment key={route.id}>
+                      {/* Outer halo stroke for emergency route visibility */}
+                      {!isFallback && (
+                        <Polyline
+                          positions={positions}
+                          pathOptions={{
+                            color: '#0284c7',
+                            weight: 6.5,
+                            opacity: 0.35,
+                            lineCap: 'round',
+                            lineJoin: 'round',
+                          }}
+                        />
+                      )}
+
+                      {/* Inner crisp emergency route polyline */}
+                      <Polyline
+                        positions={positions}
+                        pathOptions={{
+                          color: route.blocked ? '#ef4444' : '#2563eb',
+                          weight: 3.5,
+                          opacity: 0.95,
+                          lineCap: 'round',
+                          lineJoin: 'round',
+                          dashArray: isFallback ? '6, 8' : undefined,
+                        }}
+                      >
+                        <Popup className="custom-leaflet-popup">
+                          <div className="font-sans text-xs p-1 min-w-[180px]">
+                            <div className="font-bold text-blue-600 dark:text-blue-400 border-b border-slate-200 dark:border-slate-800 pb-1 mb-1">
+                              <span>{route.callSign || route.resourceId} → {route.targetTitle || 'Incident'}</span>
+                            </div>
+
+                            {route.routingStatus === 'SUCCESS' && route.distanceKm !== null && route.etaMinutes !== null ? (
+                              <div className="space-y-1 text-slate-700 dark:text-slate-300">
+                                <div className="flex justify-between">
+                                  <span className="text-slate-400">Distance:</span>
+                                  <span className="font-mono font-bold text-slate-900 dark:text-white">{route.distanceKm} km</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-slate-400">ETA:</span>
+                                  <span className="font-mono font-bold text-amber-500">{route.etaMinutes} min</span>
+                                </div>
+                                <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold pt-0.5 border-t border-slate-200 dark:border-slate-800">
+                                  ✓ Real Road Route (OSRM)
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-1">
+                                <div className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                                  Simulated Route (Road routing unavailable)
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </Popup>
+                      </Polyline>
+                    </React.Fragment>
                   );
                 })}
               </>
@@ -429,6 +591,7 @@ export const CityOperationsMap: React.FC<CityOperationsMapProps> = ({
                       key={hospital.id}
                       position={[hospital.location.lat, hospital.location.lng]}
                       icon={icon}
+                      zIndexOffset={isSelected ? 1000 : 400}
                       eventHandlers={{
                         click: () => handleSelectHospital(hospital),
                       }}
@@ -462,6 +625,7 @@ export const CityOperationsMap: React.FC<CityOperationsMapProps> = ({
                       key={resource.id}
                       position={[resource.location.lat, resource.location.lng]}
                       icon={icon}
+                      zIndexOffset={isSelected ? 1000 : 500}
                       eventHandlers={{
                         click: () => handleSelectResource(resource),
                       }}

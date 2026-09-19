@@ -42,11 +42,11 @@ export const CommandCenterPage: React.FC = () => {
           <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <span>Command Center</span>
             <span className="text-xs px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 font-mono font-medium border border-blue-200 dark:border-blue-800">
-              Trichy Emergency Overview
+              India Emergency Overview
             </span>
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Real Tiruchirappalli city geography • Live simulated operational feed
+            Real India geography • Live simulated operational feed
           </p>
         </div>
       </div>
@@ -56,7 +56,7 @@ export const CommandCenterPage: React.FC = () => {
         {/* KPI 1: Active Incidents */}
         <div className="bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3.5 flex flex-col justify-between shadow-xs kpi-card-interactive">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider" title="Active un-resolved incidents in Trichy">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider" title="Active un-resolved incidents across India">
               Active Incidents
             </span>
             <div className="p-1.5 bg-rose-50 dark:bg-rose-950/60 rounded-lg text-rose-600 dark:text-rose-400">
@@ -99,7 +99,7 @@ export const CommandCenterPage: React.FC = () => {
             </span>
           </div>
           <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100 dark:border-slate-800/80">
-            <span className="text-slate-400">Max wait: 12 min</span>
+            <span className="text-slate-400">Max wait: 12 min ago</span>
             <Link to="/incidents" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">
               Review →
             </Link>
@@ -151,7 +151,7 @@ export const CommandCenterPage: React.FC = () => {
             </span>
           </div>
           <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100 dark:border-slate-800/80">
-            <span className="text-emerald-600 dark:text-emerald-400">KMC Capacity</span>
+            <span className="text-emerald-600 dark:text-emerald-400">Capacity OK</span>
             <Link to="/hospitals" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">
               Hospitals →
             </Link>
@@ -159,14 +159,14 @@ export const CommandCenterPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Grid: Trichy Interactive Map (~65%) & Critical Incidents (~35%) */}
+      {/* Main Grid: India Interactive Map (~65%) & Critical Incidents (~35%) */}
       <div className="grid grid-cols-12 gap-4 flex-1 min-h-[480px]">
-        {/* LEFT ~65%: Trichy Operations Map (Static Panel Container) */}
+        {/* LEFT ~65%: India Operations Map (Static Panel Container) */}
         <div className="col-span-12 lg:col-span-8 bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3.5 flex flex-col shadow-xs relative">
           <SectionHeader
-            title="Trichy GIS Map"
+            title="India GIS Map"
             icon={<Map className="w-4 h-4 text-blue-500" />}
-            subtitle="Tiruchirappalli Operational View"
+            subtitle="India Emergency Operations View"
             action={
               <button
                 onClick={() => navigate('/map')}

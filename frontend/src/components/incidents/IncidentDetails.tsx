@@ -99,13 +99,13 @@ export const IncidentDetails: React.FC<IncidentDetailsProps> = ({
           </div>
 
           <div className="bg-slate-900/90 border border-slate-800 rounded p-2 space-y-1">
-            <div className="text-[10px] text-slate-400 font-bold uppercase">Reported & Wait</div>
-            <div className="text-slate-200">
-              {new Date(incident.firstReportedAt).toLocaleTimeString()}
+            <div className="text-[10px] text-slate-400 font-bold uppercase">Reported Time</div>
+            <div className="text-slate-200 font-mono">
+              {new Date(incident.firstReportedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
             <div className="text-[10px] text-amber-400 font-bold flex items-center gap-1">
               <Clock className="w-3 h-3 text-amber-400" />
-              <span>{waitingMinutes} minutes waiting</span>
+              <span>Reported {waitingMinutes} min ago</span>
             </div>
           </div>
         </div>

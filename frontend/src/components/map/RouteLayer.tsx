@@ -10,42 +10,72 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({ routes }) => {
   return (
     <>
       {routes.map((route) => {
-        // Construct array of Leaflet lat/lng points: origin -> waypoints -> destination
-        const points = [
-          [route.origin.lat, route.origin.lng] as [number, number],
-          ...(route.waypoints || []).map((w) => [w.lat, w.lng] as [number, number]),
-          [route.destination.lat, route.destination.lng] as [number, number],
-        ];
+        const points = (route.waypoints && route.waypoints.length > 0)
+          ? route.waypoints.map((w) => [w.lat, w.lng] as [number, number])
+          : [
+              [route.origin.lat, route.origin.lng] as [number, number],
+              [route.destination.lat, route.destination.lng] as [number, number],
+            ];
 
-        const color = route.blocked ? '#ef4444' : '#3b82f6'; // Red if blocked, Blue otherwise
+        const isFallback = route.routingStatus === 'FALLBACK' || route.isSimulated;
 
         return (
-          <Polyline
-            key={route.id}
-            positions={points}
-            pathOptions={{
-              color,
-              weight: 3,
-              opacity: 0.8,
-              dashArray: route.routingMode === 'SIMULATED' ? '6, 8' : undefined,
-            }}
-          >
-            <Popup className="custom-leaflet-popup">
-              <div className="font-mono text-xs text-slate-100 p-1 min-w-[160px]">
-                <div className="font-bold text-blue-400 border-b border-slate-700 pb-1 mb-1">
-                  ROUTE: {route.id} ({route.routingMode})
-                </div>
-                <div className="text-[11px] text-slate-300">
-                  ETA: <span className="font-bold text-amber-400">{route.etaMinutes} min</span> ({route.distanceKm} km)
-                </div>
-                {route.blocked && (
-                  <div className="text-[10px] text-rose-400 font-bold mt-1">
-                    ROAD BLOCKED
+          <React.Fragment key={route.id}>
+            {!isFallback && (
+              <Polyline
+                positions={points}
+                pathOptions={{
+                  color: '#0284c7',
+                  weight: 6.5,
+                  opacity: 0.35,
+                  lineCap: 'round',
+                  lineJoin: 'round',
+                }}
+              />
+            )}
+
+            <Polyline
+              positions={points}
+              pathOptions={{
+                color: route.blocked ? '#ef4444' : '#2563eb',
+                weight: 3.5,
+                opacity: 0.95,
+                lineCap: 'round',
+                lineJoin: 'round',
+                dashArray: isFallback ? '6, 8' : undefined,
+              }}
+            >
+              <Popup className="custom-leaflet-popup">
+                <div className="font-sans text-xs p-1 min-w-[180px]">
+                  <div className="font-bold text-blue-600 dark:text-blue-400 border-b border-slate-200 dark:border-slate-800 pb-1 mb-1">
+                    <span>{route.callSign || route.resourceId} → {route.targetTitle || 'Incident'}</span>
                   </div>
-                )}
-              </div>
-            </Popup>
-          </Polyline>
+
+                  {route.routingStatus === 'SUCCESS' && route.distanceKm !== null && route.etaMinutes !== null ? (
+                    <div className="space-y-1 text-slate-700 dark:text-slate-300">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Distance:</span>
+                        <span className="font-mono font-bold text-slate-900 dark:text-white">{route.distanceKm} km</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">ETA:</span>
+                        <span className="font-mono font-bold text-amber-500">{route.etaMinutes} min</span>
+                      </div>
+                      <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold pt-0.5 border-t border-slate-200 dark:border-slate-800">
+                        ✓ Real Road Route (OSRM)
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <div className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                        Simulated Route (Road routing unavailable)
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Popup>
+            </Polyline>
+          </React.Fragment>
         );
       })}
     </>

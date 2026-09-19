@@ -70,7 +70,7 @@ export const MapDetailPanel: React.FC<MapDetailPanelProps> = ({ selectedItem, on
             </div>
             <div className="flex justify-between">
               <span className="text-slate-400">Reported</span>
-              <span>{new Date(selectedItem.item.firstReportedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              <span className="font-mono">{Math.round((selectedItem.item.priority?.waitingSeconds || 0) / 60)} min ago</span>
             </div>
           </div>
 

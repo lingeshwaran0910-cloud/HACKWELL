@@ -72,7 +72,7 @@ export const IncidentCard: React.FC<IncidentCardProps> = ({ incident, isSelected
       <div className="flex items-center justify-between text-[11px] font-sans text-slate-400 pt-2 border-t border-slate-800/60">
         <div className="flex items-center gap-1">
           <Clock className="w-3 h-3 text-slate-400" />
-          <span className="font-mono text-[10px]">{waitingMinutes}m wait</span>
+          <span className="font-mono text-[10px]">Reported {waitingMinutes} min ago</span>
         </div>
         <div>
           <span>Debt: <strong className="font-mono text-rose-400">{incident.responseDebt.value}</strong></span>

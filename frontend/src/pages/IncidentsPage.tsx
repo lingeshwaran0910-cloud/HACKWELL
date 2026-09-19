@@ -11,6 +11,7 @@ import { IncidentStatusBadge } from '../components/incidents/IncidentStatusBadge
 import { IncidentSeverityBadge } from '../components/incidents/IncidentSeverityBadge';
 import { EvidenceList } from '../components/incidents/EvidenceList';
 import { StatusBadge } from '../components/common/StatusBadge';
+import { formatReportedTime } from '../utils/timeUtils';
 
 type TabType = 'overview' | 'evidence' | 'timeline' | 'response';
 
@@ -227,8 +228,8 @@ export const IncidentsPage: React.FC = () => {
                         <span className="font-mono text-slate-800 dark:text-slate-200 font-bold">{selectedIncident.location.lat.toFixed(4)}, {selectedIncident.location.lng.toFixed(4)}</span>
                       </div>
                       <div className="p-2 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg">
-                        <span className="text-[10px] text-slate-400 uppercase font-semibold block">Age</span>
-                        <span className="font-mono text-slate-800 dark:text-slate-200 font-bold">{Math.round(selectedIncident.priority.waitingSeconds / 60)} min</span>
+                        <span className="text-[10px] text-slate-400 uppercase font-semibold block">Reported</span>
+                        <span className="font-mono text-slate-800 dark:text-slate-200 font-bold">{formatReportedTime(selectedIncident.firstReportedAt, selectedIncident.priority.waitingSeconds)}</span>
                       </div>
                     </div>
 
