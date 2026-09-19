@@ -52,7 +52,7 @@ export const SidebarNav: React.FC = () => {
     },
     {
       path: '/intelligence',
-      label: 'Response Intelligence',
+      label: 'Intelligence',
       icon: <BrainCircuit className="w-4 h-4 shrink-0" />,
     },
     {
@@ -62,48 +62,54 @@ export const SidebarNav: React.FC = () => {
     },
     {
       path: '/activity',
-      label: 'System Activity',
+      label: 'Activity',
       icon: <History className="w-4 h-4 shrink-0" />,
     },
   ];
 
   return (
     <aside
-      className={`bg-white dark:bg-[#0b1329] border-r border-slate-200 dark:border-slate-800/90 flex flex-col justify-between select-none shrink-0 h-screen transition-all duration-300 z-30 relative shadow-sm ${
-        isCollapsed ? 'w-18' : 'w-64'
+      className={`bg-white dark:bg-[#0b1329] border-r border-slate-200 dark:border-slate-800/90 flex flex-col justify-between select-none shrink-0 h-screen transition-all duration-300 z-30 relative shadow-xs ${
+        isCollapsed ? 'w-20' : 'w-64'
       }`}
     >
-      {/* Collapse/Expand Toggle Button */}
-      <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-6 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 shadow-md transition-colors z-40"
-        title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-      >
-        {isCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
-      </button>
-
-      {/* Top Header & Brand */}
-      <div>
-        <div className={`p-4 border-b border-slate-100 dark:border-slate-800/80 flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
-          <div className="p-1.5 bg-blue-600/10 dark:bg-blue-950/80 border border-blue-500/30 rounded-lg text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-            <Shield className="w-5 h-5" />
-          </div>
-          {!isCollapsed && (
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
+      {/* Top Section */}
+      <div className="flex flex-col flex-1 overflow-y-auto">
+        {/* Brand & Toggle Header */}
+        <div
+          className={`p-3.5 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between shrink-0 ${
+            isCollapsed ? 'flex-col gap-2.5' : ''
+          }`}
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 bg-blue-600/10 dark:bg-blue-950/80 border border-blue-500/30 rounded-xl text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <Shield className="w-5 h-5" />
+            </div>
+            {!isCollapsed && (
+              <div className="min-w-0">
                 <h1 className="font-sans font-bold text-sm tracking-tight text-slate-900 dark:text-slate-100 truncate">
                   SafeCity AI
                 </h1>
+                <p className="text-[10px] font-sans text-slate-500 dark:text-slate-400 truncate">
+                  Emergency Operations
+                </p>
               </div>
-              <p className="text-[10px] font-sans text-slate-500 dark:text-slate-400 truncate">
-                Emergency Intelligence
-              </p>
-            </div>
-          )}
+            )}
+          </div>
+
+          {/* Toggle Control Button */}
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-700/80 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-center cursor-pointer transition-colors shrink-0"
+            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          </button>
         </div>
 
-        {/* Nav Links */}
-        <nav className="p-2 space-y-1">
+        {/* Navigation Items */}
+        <nav className="p-2 space-y-1 flex-1">
           {!isCollapsed && (
             <div className="px-3 py-1.5 text-[10px] font-sans font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-400">
               Operations Workspace
@@ -116,6 +122,7 @@ export const SidebarNav: React.FC = () => {
               to={item.path}
               end={item.path === '/'}
               title={isCollapsed ? item.label : undefined}
+              aria-label={item.label}
               className={({ isActive }) =>
                 `flex items-center ${isCollapsed ? 'justify-center px-0 py-2.5' : 'justify-between px-3 py-2.5'} rounded-lg text-xs font-sans transition-all group ${
                   isActive
@@ -133,8 +140,8 @@ export const SidebarNav: React.FC = () => {
         </nav>
       </div>
 
-      {/* Bottom Status Widget */}
-      <div className={`p-3 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 ${isCollapsed ? 'text-center' : ''}`}>
+      {/* Bottom Status Footer */}
+      <div className={`p-3 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 shrink-0 ${isCollapsed ? 'text-center' : ''}`}>
         {!isCollapsed ? (
           <div className="space-y-1 font-sans text-xs">
             <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium text-[11px]">

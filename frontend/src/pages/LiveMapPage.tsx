@@ -1,9 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { CityOperationsMap } from '../components/map/CityOperationsMap';
 import { Incident } from '@shared/types';
 
 export const LiveMapPage: React.FC = () => {
+  const location = useLocation();
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (location.state?.selectedIncidentId) {
+      setSelectedIncidentId(location.state.selectedIncidentId);
+    }
+  }, [location.state]);
 
   const handleSelectIncident = (incident: Incident) => {
     setSelectedIncidentId(incident.id);

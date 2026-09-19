@@ -1,47 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bell, ShieldAlert, Building2, Radio, Check, X } from 'lucide-react';
-
-interface NotificationItem {
-  id: string;
-  title: string;
-  desc: string;
-  time: string;
-  unread: boolean;
-  type: 'critical' | 'warning' | 'info';
-}
+import { useApp } from '../../context/AppContext';
 
 export const NotificationPanel: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([
-    {
-      id: 'notif-1',
-      title: 'Critical Incident Verified',
-      desc: 'Multi-Vehicle Collision INC-001 in Zone 2 verified by CCTV telemetry.',
-      time: '2m ago',
-      unread: true,
-      type: 'critical',
-    },
-    {
-      id: 'notif-2',
-      title: 'Hospital Capacity Alert',
-      desc: 'Central Trauma Center approaching 80% capacity utilization.',
-      time: '12m ago',
-      unread: true,
-      type: 'warning',
-    },
-    {
-      id: 'notif-3',
-      title: 'Telemetry Stale Warning',
-      desc: 'Ambulance A12 GPS telemetry outdated (> 120s).',
-      time: '25m ago',
-      unread: false,
-      type: 'info',
-    },
-  ]);
-
+  const { alerts, markAlertRead, markAllAlertsRead } = useApp();
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const unreadCount = notifications.filter((n) => n.unread).length;
+  const unreadCount = alerts.filter((n) => n.unread).length;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -53,16 +19,12 @@ export const NotificationPanel: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
-  };
-
   return (
     <div className="relative" ref={panelRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 transition-colors shadow-sm relative flex items-center justify-center"
-        title="Notifications"
+        className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 transition-colors shadow-xs relative flex items-center justify-center cursor-pointer"
+        title="Notifications Alert Center"
         aria-label="Notifications"
       >
         <Bell className="w-4 h-4 text-slate-600 dark:text-slate-300" />
@@ -80,15 +42,15 @@ export const NotificationPanel: React.FC = () => {
               <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">Notifications</span>
               {unreadCount > 0 && (
                 <span className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-mono text-[10px] font-semibold">
-                  {unreadCount} new
+                  {unreadCount} unread
                 </span>
               )}
             </div>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <button
-                  onClick={markAllRead}
-                  className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium"
+                  onClick={markAllAlertsRead}
+                  className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium cursor-pointer"
                 >
                   <Check className="w-3 h-3" />
                   Mark read
@@ -96,7 +58,7 @@ export const NotificationPanel: React.FC = () => {
               )}
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -104,33 +66,40 @@ export const NotificationPanel: React.FC = () => {
           </div>
 
           <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-            {notifications.map((n) => (
-              <div
-                key={n.id}
-                className={`p-2.5 rounded-lg border transition-colors flex items-start gap-2.5 ${
-                  n.unread
-                    ? 'bg-blue-50/60 dark:bg-slate-800/60 border-blue-200 dark:border-slate-700/80'
-                    : 'bg-slate-50/50 dark:bg-slate-900/40 border-slate-100 dark:border-slate-800/60'
-                }`}
-              >
-                <div className="mt-0.5 shrink-0">
-                  {n.type === 'critical' ? (
-                    <ShieldAlert className="w-4 h-4 text-rose-500" />
-                  ) : n.type === 'warning' ? (
-                    <Building2 className="w-4 h-4 text-amber-500" />
-                  ) : (
-                    <Radio className="w-4 h-4 text-blue-500" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-1 mb-0.5">
-                    <span className="font-semibold text-slate-900 dark:text-slate-100 text-xs truncate">{n.title}</span>
-                    <span className="text-[10px] font-mono text-slate-400 shrink-0">{n.time}</span>
+            {alerts.length === 0 ? (
+              <div className="p-4 text-center text-slate-400 text-xs">No notifications yet.</div>
+            ) : (
+              alerts.map((n) => (
+                <div
+                  key={n.id}
+                  onClick={() => markAlertRead(n.id)}
+                  className={`p-2.5 rounded-lg border transition-colors flex items-start gap-2.5 cursor-pointer ${
+                    n.unread
+                      ? 'bg-blue-50/60 dark:bg-slate-800/60 border-blue-200 dark:border-slate-700/80'
+                      : 'bg-slate-50/50 dark:bg-slate-900/40 border-slate-100 dark:border-slate-800/60 opacity-80'
+                  }`}
+                >
+                  <div className="mt-0.5 shrink-0">
+                    {n.type === 'critical' ? (
+                      <ShieldAlert className="w-4 h-4 text-rose-500" />
+                    ) : n.type === 'warning' ? (
+                      <Building2 className="w-4 h-4 text-amber-500" />
+                    ) : (
+                      <Radio className="w-4 h-4 text-blue-500" />
+                    )}
                   </div>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug">{n.desc}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1 mb-0.5">
+                      <span className="font-semibold text-slate-900 dark:text-slate-100 text-xs truncate">
+                        {n.title}
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-400 shrink-0">{n.time}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug">{n.desc}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       )}

@@ -11,6 +11,7 @@ import { createIncidentIcon, createResourceIcon, createHospitalIcon } from './ma
 import { MapLegend } from './MapLegend';
 import { MapDetailPanel, SelectedMapItem } from './MapDetailPanel';
 import { useTheme } from '../../context/ThemeContext';
+import { useApp } from '../../context/AppContext';
 import { GoogleMapContainer } from './GoogleMapContainer';
 
 // Controller component for Reset View / Fit Trichy
@@ -60,6 +61,102 @@ const MapCenterController: React.FC<{ selectedItem: SelectedMapItem }> = ({ sele
   return null;
 };
 
+// Tiruchirappalli (Trichy) Strict Operational Geographical Bounds
+const TRICHY_SW: L.LatLngTuple = [10.6500, 78.5200];
+const TRICHY_NE: L.LatLngTuple = [10.9300, 78.8800];
+const TRICHY_BOUNDS = L.latLngBounds(TRICHY_SW, TRICHY_NE);
+
+// Custom Map Tap & Double-Tap Zoom Controller:
+// Single tap background -> Zoom OUT 1 level (around tap point)
+// Double tap background -> Zoom IN 1 level (around tap point)
+const MapTapZoomController: React.FC = () => {
+  const map = useMap();
+
+  useEffect(() => {
+    // Explicitly disable Leaflet native doubleClickZoom
+    if (map.doubleClickZoom) {
+      map.doubleClickZoom.disable();
+    }
+
+    let tapTimer: ReturnType<typeof setTimeout> | null = null;
+    let tapCount = 0;
+    let pendingLatLng: L.LatLng | null = null;
+
+    const handleMapClick = (e: L.LeafletMouseEvent) => {
+      const originalEvent = e.originalEvent;
+      const target = originalEvent?.target as HTMLElement | null;
+      if (!target) return;
+
+      // Check if click target is an interactive marker, polygon, control, popup, button, drawer, etc.
+      const isInteractive =
+        target.closest('.leaflet-interactive') ||
+        target.closest('.leaflet-control-container') ||
+        target.closest('.leaflet-popup') ||
+        target.closest('.map-control-overlay') ||
+        target.closest('button') ||
+        target.closest('input') ||
+        target.closest('a') ||
+        target.closest('.custom-map-drawer') ||
+        target.closest('.leaflet-bar');
+
+      if (isInteractive) {
+        if (tapTimer) {
+          clearTimeout(tapTimer);
+          tapTimer = null;
+        }
+        tapCount = 0;
+        pendingLatLng = null;
+        return;
+      }
+
+      tapCount++;
+      pendingLatLng = e.latlng;
+
+      if (tapCount === 1) {
+        // Wait 280ms to determine if a 2nd tap follows (double tap)
+        tapTimer = setTimeout(() => {
+          if (tapCount === 1 && pendingLatLng) {
+            const currentZoom = map.getZoom();
+            const minZoom = map.getMinZoom() || 11;
+            if (currentZoom > minZoom) {
+              map.setZoomAround(pendingLatLng, currentZoom - 1, { animate: true });
+            }
+          }
+          tapCount = 0;
+          tapTimer = null;
+          pendingLatLng = null;
+        }, 280);
+      } else if (tapCount === 2) {
+        // Double tap detected! Cancel single-tap timer and perform ONLY ONE Zoom IN action
+        if (tapTimer) {
+          clearTimeout(tapTimer);
+          tapTimer = null;
+        }
+
+        if (pendingLatLng) {
+          const currentZoom = map.getZoom();
+          const maxZoom = map.getMaxZoom() || 18;
+          if (currentZoom < maxZoom) {
+            map.setZoomAround(pendingLatLng, currentZoom + 1, { animate: true });
+          }
+        }
+
+        tapCount = 0;
+        pendingLatLng = null;
+      }
+    };
+
+    map.on('click', handleMapClick);
+
+    return () => {
+      map.off('click', handleMapClick);
+      if (tapTimer) clearTimeout(tapTimer);
+    };
+  }, [map]);
+
+  return null;
+};
+
 interface CityOperationsMapProps {
   selectedIncidentId?: string | null;
   onSelectIncident?: (incident: Incident) => void;
@@ -74,12 +171,8 @@ export const CityOperationsMap: React.FC<CityOperationsMapProps> = ({
   onSelectHospital,
 }) => {
   const { theme } = useTheme();
-  const stats = mockService.getSummaryStats();
+  const { incidents, resources, hospitals, routes, summaryStats: stats } = useApp();
   const zones = mockService.getZones();
-  const incidents = mockService.getIncidents();
-  const resources = mockService.getResources();
-  const hospitals = mockService.getHospitals();
-  const routes = mockService.getRoutes();
 
   // Environment API key check for Google Maps JS API
   const googleApiKey = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string) || '';
@@ -181,7 +274,7 @@ export const CityOperationsMap: React.FC<CityOperationsMapProps> = ({
           onSelectIncident={handleSelectIncident}
           onSelectResource={handleSelectResource}
           onSelectHospital={handleSelectHospital}
-          onSelectZone={(zone) => setSelectedItem({ type: 'zone', item: zone })}
+          onSelectZone={(zone: Zone) => setSelectedItem({ type: 'zone', item: zone })}
           theme={theme}
         />
       ) : (
@@ -190,7 +283,12 @@ export const CityOperationsMap: React.FC<CityOperationsMapProps> = ({
           <MapContainer
             center={[stats.center.lat, stats.center.lng]}
             zoom={13}
+            minZoom={11}
+            maxZoom={18}
+            maxBounds={TRICHY_BOUNDS}
+            maxBoundsViscosity={1.0}
             scrollWheelZoom={false}
+            doubleClickZoom={false}
             style={{ width: '100%', height: '100%', backgroundColor: theme === 'dark' ? '#070b14' : '#f8fafc' }}
             zoomControl={true}
             className="z-0 relative"
@@ -235,7 +333,7 @@ export const CityOperationsMap: React.FC<CityOperationsMapProps> = ({
                     onChange={() => toggleLayer('resources')}
                     className="rounded text-amber-600 focus:ring-0 bg-slate-100 dark:bg-slate-950 border-slate-300 dark:border-slate-700"
                   />
-                  <span>Units ({resources.length})</span>
+                  <span>Fleet ({resources.length})</span>
                 </label>
                 <span className="text-slate-300 dark:text-slate-700">|</span>
                 <label className="flex items-center gap-1 cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
@@ -261,6 +359,7 @@ export const CityOperationsMap: React.FC<CityOperationsMapProps> = ({
             </div>
 
             <MapCenterController selectedItem={selectedItem} />
+            <MapTapZoomController />
 
             {/* Theme-Aware Real Map Tiles */}
             <TileLayer

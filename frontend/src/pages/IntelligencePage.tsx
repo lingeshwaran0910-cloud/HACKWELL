@@ -43,7 +43,7 @@ export const IntelligencePage: React.FC = () => {
           return (
             <div
               key={rec.id}
-              className="bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-4 flex flex-col space-y-3 shadow-xs"
+              className="bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-4 flex flex-col space-y-3 shadow-xs card-no-scale"
             >
               {/* Header */}
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
@@ -102,7 +102,7 @@ export const IntelligencePage: React.FC = () => {
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
                 <button
                   onClick={() => handleDecision(rec.id, 'ACCEPTED')}
-                  className={`px-3 py-1.5 rounded-lg font-semibold text-xs flex items-center gap-1 transition-colors ${
+                  className={`px-3 py-1.5 rounded-lg font-semibold text-xs flex items-center gap-1 transition-colors btn-interactive ${
                     currentState === 'ACCEPTED'
                       ? 'bg-emerald-600 text-white'
                       : 'bg-emerald-50 dark:bg-emerald-950/80 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700'
@@ -114,7 +114,7 @@ export const IntelligencePage: React.FC = () => {
 
                 <button
                   onClick={() => handleDecision(rec.id, 'MODIFIED')}
-                  className={`px-3 py-1.5 rounded-lg font-semibold text-xs flex items-center gap-1 transition-colors ${
+                  className={`px-3 py-1.5 rounded-lg font-semibold text-xs flex items-center gap-1 transition-colors btn-interactive ${
                     currentState === 'MODIFIED'
                       ? 'bg-amber-600 text-white'
                       : 'bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
@@ -126,7 +126,7 @@ export const IntelligencePage: React.FC = () => {
 
                 <button
                   onClick={() => handleDecision(rec.id, 'REJECTED')}
-                  className={`px-3 py-1.5 rounded-lg font-semibold text-xs flex items-center gap-1 transition-colors ${
+                  className={`px-3 py-1.5 rounded-lg font-semibold text-xs flex items-center gap-1 transition-colors btn-interactive ${
                     currentState === 'REJECTED'
                       ? 'bg-rose-600 text-white'
                       : 'bg-rose-50 dark:bg-rose-950/80 hover:bg-rose-100 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-700'

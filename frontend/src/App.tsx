@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AppProvider } from './context/AppContext';
 import { AppShell } from './components/layout/AppShell';
 
 import { CommandCenterPage } from './pages/CommandCenterPage';
@@ -13,21 +14,23 @@ import { SystemActivityPage } from './pages/SystemActivityPage';
 
 export const App: React.FC = () => {
   return (
-    <BrowserRouter>
-      <AppShell>
-        <Routes>
-          <Route path="/" element={<CommandCenterPage />} />
-          <Route path="/incidents" element={<IncidentsPage />} />
-          <Route path="/map" element={<LiveMapPage />} />
-          <Route path="/resources" element={<ResourcesPage />} />
-          <Route path="/hospitals" element={<HospitalsPage />} />
-          <Route path="/intelligence" element={<IntelligencePage />} />
-          <Route path="/simulation" element={<SimulationPage />} />
-          <Route path="/activity" element={<SystemActivityPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AppShell>
-    </BrowserRouter>
+    <AppProvider>
+      <BrowserRouter>
+        <AppShell>
+          <Routes>
+            <Route path="/" element={<CommandCenterPage />} />
+            <Route path="/incidents" element={<IncidentsPage />} />
+            <Route path="/map" element={<LiveMapPage />} />
+            <Route path="/resources" element={<ResourcesPage />} />
+            <Route path="/hospitals" element={<HospitalsPage />} />
+            <Route path="/intelligence" element={<IntelligencePage />} />
+            <Route path="/simulation" element={<SimulationPage />} />
+            <Route path="/activity" element={<SystemActivityPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AppShell>
+      </BrowserRouter>
+    </AppProvider>
   );
 };
 

@@ -9,6 +9,50 @@
   }
 }
 
+@layer components {
+  /* Reusable Interactive Card Elevation Effect */
+  .card-interactive {
+    @apply transition-all duration-200 ease-out cursor-pointer hover:-translate-y-[2px] hover:scale-[1.015] hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700/80 active:translate-y-0 active:scale-100 motion-reduce:transform-none motion-reduce:transition-none;
+  }
+
+  /* Interactive Card without transform scaling (Highlight only) */
+  .card-no-scale {
+    @apply transition-colors duration-200 ease-out cursor-pointer hover:border-slate-300 dark:hover:border-slate-700/80;
+  }
+
+  /* KPI Card Elevation Effect */
+  .kpi-card-interactive {
+    @apply transition-all duration-200 ease-out cursor-pointer hover:-translate-y-[2px] hover:scale-[1.015] hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700/80 motion-reduce:transform-none;
+  }
+
+  /* Button Interaction Effect */
+  .btn-interactive {
+    @apply transition-all duration-200 ease-out hover:-translate-y-[1px] hover:shadow-sm active:translate-y-0 active:shadow-none motion-reduce:transform-none;
+  }
+
+  /* Modal Entrance Animation */
+  .modal-entrance {
+    animation: modalSlideIn 200ms ease-out forwards;
+  }
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-entrance {
+    animation: none !important;
+  }
+}
+
 /* Custom Scrollbar for Emergency Operations Interface */
 ::-webkit-scrollbar {
   width: 5px;
@@ -26,4 +70,30 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #334155;
+}
+
+/* Ensure Leaflet zoom control (+ / -) is clearly visible below Trichy header badge */
+.leaflet-top.leaflet-left {
+  top: 48px !important;
+  left: 12px !important;
+  z-index: 1000 !important;
+}
+
+.leaflet-control-zoom {
+  border: 1px solid rgba(148, 163, 184, 0.4) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1) !important;
+  border-radius: 6px !important;
+  overflow: hidden;
+}
+
+.leaflet-control-zoom a {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  color: #1e293b !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8) !important;
+}
+
+.dark .leaflet-control-zoom a {
+  background-color: rgba(15, 23, 42, 0.95) !important;
+  color: #f8fafc !important;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.8) !important;
 }

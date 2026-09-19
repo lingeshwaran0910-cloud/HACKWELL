@@ -15,19 +15,18 @@ import { StatusBadge } from '../components/common/StatusBadge';
 import { IncidentSeverityBadge } from '../components/incidents/IncidentSeverityBadge';
 import { IncidentStatusBadge } from '../components/incidents/IncidentStatusBadge';
 import { CityOperationsMap } from '../components/map/CityOperationsMap';
-import { mockService } from '../services/mockService';
+import { useApp } from '../context/AppContext';
 import { Incident } from '@shared/types';
 
 export const CommandCenterPage: React.FC = () => {
   const navigate = useNavigate();
-  const stats = mockService.getSummaryStats();
-  const incidents = mockService.getIncidents();
-  const hospitals = mockService.getHospitals();
+  const { incidents, hospitals, summaryStats } = useApp();
 
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
 
-  // Top 3 urgent incidents
+  // Top 3 urgent active incidents
   const urgentIncidents = [...incidents]
+    .filter((i) => i.status !== 'RESOLVED')
     .sort((a, b) => b.priority.score - a.priority.score)
     .slice(0, 3);
 
@@ -36,7 +35,7 @@ export const CommandCenterPage: React.FC = () => {
   ).length;
 
   return (
-    <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-1 select-none">
+    <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-1 select-none font-sans">
       {/* Page Title & Overview */}
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
         <div>
@@ -55,7 +54,7 @@ export const CommandCenterPage: React.FC = () => {
       {/* Executive KPI Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* KPI 1: Active Incidents */}
-        <div className="bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3.5 flex flex-col justify-between shadow-xs">
+        <div className="bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3.5 flex flex-col justify-between shadow-xs kpi-card-interactive">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider" title="Active un-resolved incidents in Trichy">
               Active Incidents
@@ -66,7 +65,7 @@ export const CommandCenterPage: React.FC = () => {
           </div>
           <div className="my-1.5 flex items-baseline gap-2">
             <span className="font-mono text-2xl font-bold text-slate-900 dark:text-slate-100">
-              {stats.activeIncidents}
+              {summaryStats.activeIncidents}
             </span>
             <span className="text-[11px] font-sans text-rose-600 dark:text-rose-400 flex items-center gap-0.5">
               <TrendingUp className="w-3 h-3" />
@@ -74,7 +73,7 @@ export const CommandCenterPage: React.FC = () => {
             </span>
           </div>
           <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100 dark:border-slate-800/80">
-            <span className="text-slate-400">Total: {stats.totalIncidents}</span>
+            <span className="text-slate-400">Total: {summaryStats.totalIncidents}</span>
             <Link to="/incidents" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">
               Incidents →
             </Link>
@@ -82,7 +81,7 @@ export const CommandCenterPage: React.FC = () => {
         </div>
 
         {/* KPI 2: Critical Severity */}
-        <div className="bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3.5 flex flex-col justify-between shadow-xs">
+        <div className="bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3.5 flex flex-col justify-between shadow-xs kpi-card-interactive">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Critical
@@ -93,7 +92,7 @@ export const CommandCenterPage: React.FC = () => {
           </div>
           <div className="my-1.5 flex items-baseline gap-2">
             <span className="font-mono text-2xl font-bold text-amber-600 dark:text-amber-400">
-              {incidents.filter((i) => i.severity >= 4).length}
+              {incidents.filter((i) => i.severity >= 4 && i.status !== 'RESOLVED').length}
             </span>
             <span className="text-[11px] text-slate-400">
               Sev 4-5 high priority
@@ -108,10 +107,10 @@ export const CommandCenterPage: React.FC = () => {
         </div>
 
         {/* KPI 3: Available Resources */}
-        <div className="bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3.5 flex flex-col justify-between shadow-xs">
+        <div className="bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3.5 flex flex-col justify-between shadow-xs kpi-card-interactive">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Available Units
+              Available Fleet
             </span>
             <div className="p-1.5 bg-blue-50 dark:bg-blue-950/60 rounded-lg text-blue-600 dark:text-blue-400">
               <Ambulance className="w-4 h-4" />
@@ -119,10 +118,10 @@ export const CommandCenterPage: React.FC = () => {
           </div>
           <div className="my-1.5 flex items-baseline gap-2">
             <span className="font-mono text-2xl font-bold text-slate-900 dark:text-slate-100">
-              {stats.availableResources}
+              {summaryStats.availableResources}
             </span>
             <span className="text-[11px] font-mono text-slate-400">
-              / {stats.totalResources} fleet units
+              / {summaryStats.totalResources} fleet units
             </span>
           </div>
           <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100 dark:border-slate-800/80">
@@ -134,7 +133,7 @@ export const CommandCenterPage: React.FC = () => {
         </div>
 
         {/* KPI 4: Hospital Capacity */}
-        <div className="bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3.5 flex flex-col justify-between shadow-xs">
+        <div className="bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3.5 flex flex-col justify-between shadow-xs kpi-card-interactive">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Hospital Pressure
@@ -148,11 +147,11 @@ export const CommandCenterPage: React.FC = () => {
               {highPressureHospitalsCount}
             </span>
             <span className="text-[11px] text-slate-400">
-              alerting of {stats.totalHospitals} hospitals
+              alerting of {summaryStats.totalHospitals} hospitals
             </span>
           </div>
           <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100 dark:border-slate-800/80">
-            <span className="text-emerald-600 dark:text-emerald-400">KMC 42 beds</span>
+            <span className="text-emerald-600 dark:text-emerald-400">KMC Capacity</span>
             <Link to="/hospitals" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">
               Hospitals →
             </Link>
@@ -162,7 +161,7 @@ export const CommandCenterPage: React.FC = () => {
 
       {/* Main Grid: Trichy Interactive Map (~65%) & Critical Incidents (~35%) */}
       <div className="grid grid-cols-12 gap-4 flex-1 min-h-[480px]">
-        {/* LEFT ~65%: Trichy Operations Map */}
+        {/* LEFT ~65%: Trichy Operations Map (Static Panel Container) */}
         <div className="col-span-12 lg:col-span-8 bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3.5 flex flex-col shadow-xs relative">
           <SectionHeader
             title="Trichy GIS Map"
@@ -171,7 +170,7 @@ export const CommandCenterPage: React.FC = () => {
             action={
               <button
                 onClick={() => navigate('/map')}
-                className="px-2.5 py-1 bg-blue-600 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 hover:bg-blue-700 transition-colors shadow-xs"
+                className="px-2.5 py-1 bg-blue-600 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 hover:bg-blue-700 transition-colors shadow-xs cursor-pointer btn-interactive"
               >
                 <span>Full Map</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -210,7 +209,7 @@ export const CommandCenterPage: React.FC = () => {
                 <div
                   key={inc.id}
                   onClick={() => navigate('/incidents')}
-                  className="p-2.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/60 dark:hover:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer transition-colors flex items-start justify-between gap-2"
+                  className="p-2.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/60 dark:hover:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-lg card-interactive flex items-start justify-between gap-2"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-1.5">
@@ -237,7 +236,7 @@ export const CommandCenterPage: React.FC = () => {
               icon={<BrainCircuit className="w-4 h-4 text-amber-500" />}
               action={<StatusBadge label="PROPOSED" variant="warning" size="sm" />}
             />
-            <div className="p-2.5 bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-lg space-y-1.5 text-xs">
+            <div className="p-2.5 bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-lg card-interactive space-y-1.5 text-xs">
               <div className="flex items-center justify-between font-semibold">
                 <span className="text-slate-900 dark:text-slate-100">Deploy AMB-014</span>
                 <span className="text-emerald-600 dark:text-emerald-400 font-mono">3.2 min ETA</span>

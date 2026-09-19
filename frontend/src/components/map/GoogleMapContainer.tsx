@@ -129,12 +129,24 @@ export const GoogleMapContainer: React.FC<GoogleMapContainerProps> = ({
       const map = new window.google.maps.Map(mapRef.current, {
         center,
         zoom,
+        minZoom: 11,
+        maxZoom: 18,
         mapTypeId: google.maps.MapTypeId.ROADMAP,
         disableDefaultUI: false,
         zoomControl: true,
         mapTypeControl: false,
         streetViewControl: false,
         fullscreenControl: false,
+        disableDoubleClickZoom: true,
+        restriction: {
+          latLngBounds: {
+            north: 10.9300,
+            south: 10.6500,
+            east: 78.8800,
+            west: 78.5200,
+          },
+          strictBounds: true,
+        },
         styles: theme === 'dark' ? darkMapStyle : [],
       });
       setMapInstance(map);

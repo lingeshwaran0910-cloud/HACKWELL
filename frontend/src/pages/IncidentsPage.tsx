@@ -5,7 +5,7 @@ import {
   Filter,
   X,
 } from 'lucide-react';
-import { mockService } from '../services/mockService';
+import { useApp } from '../context/AppContext';
 import { Incident, Resource, Hospital } from '@shared/types';
 import { IncidentStatusBadge } from '../components/incidents/IncidentStatusBadge';
 import { IncidentSeverityBadge } from '../components/incidents/IncidentSeverityBadge';
@@ -15,7 +15,7 @@ import { StatusBadge } from '../components/common/StatusBadge';
 type TabType = 'overview' | 'evidence' | 'timeline' | 'response';
 
 export const IncidentsPage: React.FC = () => {
-  const incidents = mockService.getIncidents();
+  const { incidents, evidence, resources, hospitals } = useApp();
 
   const [filterSeverity, setFilterSeverity] = useState<string>('ALL');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
@@ -24,7 +24,7 @@ export const IncidentsPage: React.FC = () => {
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(incidents[0]?.id || null);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
 
-  const selectedIncident = mockService.getIncidentById(selectedIncidentId);
+  const selectedIncident = incidents.find((i) => i.id === selectedIncidentId) || incidents[0];
 
   // Filtered incidents
   const filteredIncidents = useMemo(() => {
@@ -48,14 +48,18 @@ export const IncidentsPage: React.FC = () => {
     });
   }, [incidents, filterSeverity, filterStatus, searchQuery]);
 
-  const evidenceList = selectedIncident ? mockService.getEvidenceForIncident(selectedIncident.id) : [];
+  const evidenceList = selectedIncident
+    ? evidence.filter((e) => e.incidentId === selectedIncident.id)
+    : [];
+
   const assignedResources = selectedIncident
     ? (selectedIncident.assignedResourceIds || [])
-        .map((id) => mockService.getResourceById(id))
+        .map((id) => resources.find((r) => r.id === id))
         .filter((r): r is Resource => r !== undefined)
     : [];
+
   const recommendedHospital: Hospital | undefined = selectedIncident
-    ? mockService.getHospitalById(selectedIncident.recommendedHospitalId)
+    ? hospitals.find((h) => h.id === selectedIncident.recommendedHospitalId)
     : undefined;
 
   return (
@@ -68,7 +72,7 @@ export const IncidentsPage: React.FC = () => {
             <button
               key={sev}
               onClick={() => setFilterSeverity(sev)}
-              className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+              className={`px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
                 filterSeverity === sev
                   ? 'bg-blue-600 text-white shadow-xs'
                   : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -84,7 +88,7 @@ export const IncidentsPage: React.FC = () => {
             <button
               key={st}
               onClick={() => setFilterStatus(st)}
-              className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+              className={`px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
                 filterStatus === st
                   ? 'bg-blue-600 text-white shadow-xs'
                   : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -122,17 +126,22 @@ export const IncidentsPage: React.FC = () => {
           </div>
 
           <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-            {filteredIncidents.map((inc: Incident) => {
-              const isSelected = inc.id === selectedIncidentId;
-              const waitingMin = Math.round(inc.priority.waitingSeconds / 60);
+            {filteredIncidents.length === 0 ? (
+              <div className="p-6 text-center text-slate-400 dark:text-slate-400 text-xs bg-slate-50 dark:bg-slate-900/40 rounded-lg border border-slate-200 dark:border-slate-800">
+                No active emergency incidents match the current search or filter criteria.
+              </div>
+            ) : (
+              filteredIncidents.map((inc: Incident) => {
+                const isSelected = selectedIncident && inc.id === selectedIncident.id;
+                const waitingMin = Math.round(inc.priority.waitingSeconds / 60);
 
               return (
                 <div
                   key={inc.id}
                   onClick={() => setSelectedIncidentId(inc.id)}
-                  className={`p-2.5 rounded-lg border cursor-pointer transition-all ${
+                  className={`p-2.5 rounded-lg border cursor-pointer transition-all card-no-scale ${
                     isSelected
-                      ? 'bg-blue-50/80 dark:bg-slate-800/90 border-l-4 border-l-blue-600 border-slate-300 dark:border-slate-700 shadow-sm'
+                      ? 'bg-blue-50/80 dark:bg-slate-800/90 border-l-4 border-l-blue-600 border-slate-300 dark:border-slate-700 shadow-xs'
                       : 'bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-800/40'
                   }`}
                 >
@@ -160,7 +169,7 @@ export const IncidentsPage: React.FC = () => {
                   </div>
                 </div>
               );
-            })}
+            }))}
           </div>
         </div>
 
@@ -180,7 +189,7 @@ export const IncidentsPage: React.FC = () => {
                 </div>
                 <button
                   onClick={() => setSelectedIncidentId(null)}
-                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -192,7 +201,7 @@ export const IncidentsPage: React.FC = () => {
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`px-3 py-1 rounded-md font-medium capitalize transition-colors ${
+                    className={`px-3 py-1 rounded-md font-medium capitalize transition-colors cursor-pointer ${
                       activeTab === tab
                         ? 'bg-blue-600 text-white font-semibold shadow-xs'
                         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'

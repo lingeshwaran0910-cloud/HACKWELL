@@ -173,8 +173,8 @@ export const MapDetailPanel: React.FC<MapDetailPanelProps> = ({ selectedItem, on
               <span className="text-emerald-600 dark:text-emerald-400 font-bold">{selectedItem.item.bedsAvailable} / {selectedItem.item.bedsTotal}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-slate-400">Incoming Inbound</span>
-              <span className="text-amber-600 dark:text-amber-400 font-bold">{selectedItem.item.incomingLoad} units</span>
+              <span className="text-slate-400">Incoming Ambulances</span>
+              <span className="text-amber-600 dark:text-amber-400 font-bold">{selectedItem.item.incomingLoad} {selectedItem.item.incomingLoad === 1 ? 'Ambulance' : 'Ambulances'}</span>
             </div>
             <div>
               <span className="text-slate-400 block mb-0.5">Capabilities</span>

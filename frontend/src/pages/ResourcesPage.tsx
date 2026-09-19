@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { Ambulance, Radio, CheckCircle2, Clock, Filter, Search } from 'lucide-react';
-import { mockService } from '../services/mockService';
+import { useApp } from '../context/AppContext';
 import { Resource } from '@shared/types';
 import { StatusBadge } from '../components/common/StatusBadge';
 
 export const ResourcesPage: React.FC = () => {
-  const resources = mockService.getResources();
+  const { resources } = useApp();
 
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
@@ -14,15 +14,15 @@ export const ResourcesPage: React.FC = () => {
   // Summary Metrics
   const totalCount = resources.length;
   const availableCount = resources.filter((r) => r.status === 'AVAILABLE').length;
-  const assignedCount = resources.filter((r) => r.status === 'ASSIGNED' || r.status === 'EN_ROUTE' || r.status === 'TRANSPORTING').length;
+  const assignedCount = resources.filter((r) => r.status === 'ASSIGNED' || r.status === 'EN_ROUTE' || r.status === 'TRANSPORTING' || r.status === 'AT_INCIDENT').length;
   const staleCount = resources.filter((r) => r.stale).length;
 
   // Filtered list
   const filteredResources = useMemo(() => {
     return resources.filter((r) => {
       if (statusFilter === 'AVAILABLE' && r.status !== 'AVAILABLE') return false;
-      if (statusFilter === 'ASSIGNED' && r.status !== 'ASSIGNED') return false;
-      if (statusFilter === 'EN_ROUTE' && r.status !== 'EN_ROUTE') return false;
+      if (statusFilter === 'ASSIGNED' && r.status !== 'ASSIGNED' && r.status !== 'AT_INCIDENT') return false;
+      if (statusFilter === 'EN_ROUTE' && r.status !== 'EN_ROUTE' && r.status !== 'TRANSPORTING') return false;
       if (statusFilter === 'STALE' && !r.stale) return false;
 
       if (typeFilter !== 'ALL' && r.type !== typeFilter) return false;
@@ -43,7 +43,7 @@ export const ResourcesPage: React.FC = () => {
     <div className="w-full flex flex-col gap-3 font-sans select-none pb-6">
       {/* Fleet Overview KPI Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3.5 flex items-center justify-between shadow-xs">
+        <div className="bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3.5 flex items-center justify-between shadow-xs kpi-card-interactive">
           <div>
             <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase font-semibold">Total Fleet</span>
             <div className="font-mono text-2xl font-bold text-slate-900 dark:text-slate-100 mt-0.5">{totalCount}</div>
@@ -53,7 +53,7 @@ export const ResourcesPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3.5 flex items-center justify-between shadow-xs">
+        <div className="bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3.5 flex items-center justify-between shadow-xs kpi-card-interactive">
           <div>
             <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase font-semibold">Available</span>
             <div className="font-mono text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{availableCount}</div>
@@ -63,9 +63,9 @@ export const ResourcesPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3.5 flex items-center justify-between shadow-xs">
+        <div className="bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3.5 flex items-center justify-between shadow-xs kpi-card-interactive">
           <div>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase font-semibold">Dispatched</span>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase font-semibold">Active Fleet</span>
             <div className="font-mono text-2xl font-bold text-amber-600 dark:text-amber-400 mt-0.5">{assignedCount}</div>
           </div>
           <div className="p-2 bg-amber-50 dark:bg-amber-950/60 rounded-lg text-amber-600 dark:text-amber-400">
@@ -73,7 +73,7 @@ export const ResourcesPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3.5 flex items-center justify-between shadow-xs">
+        <div className="bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3.5 flex items-center justify-between shadow-xs kpi-card-interactive">
           <div>
             <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase font-semibold">Stale GPS</span>
             <div className="font-mono text-2xl font-bold text-rose-600 dark:text-rose-400 mt-0.5">{staleCount}</div>
@@ -92,7 +92,7 @@ export const ResourcesPage: React.FC = () => {
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
-              className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+              className={`px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
                 statusFilter === st
                   ? 'bg-blue-600 text-white shadow-xs'
                   : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -107,7 +107,7 @@ export const ResourcesPage: React.FC = () => {
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-xs rounded-lg border border-slate-200 dark:border-slate-800 px-2.5 py-1.5 focus:outline-none focus:border-blue-500"
+            className="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-xs rounded-lg border border-slate-200 dark:border-slate-800 px-2.5 py-1.5 focus:outline-none focus:border-blue-500 cursor-pointer"
           >
             <option value="ALL">All Types</option>
             <option value="AMBULANCE">Ambulance</option>
@@ -132,10 +132,15 @@ export const ResourcesPage: React.FC = () => {
       {/* Fleet Resource Rows */}
       <div className="bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3 flex flex-col shadow-xs">
         <div className="space-y-2">
-          {filteredResources.map((res: Resource) => (
+          {filteredResources.length === 0 ? (
+            <div className="p-6 text-center text-slate-400 dark:text-slate-400 text-xs bg-slate-50 dark:bg-slate-900/40 rounded-lg border border-slate-200 dark:border-slate-800 font-sans">
+              No emergency fleet resources match the current search or filter criteria.
+            </div>
+          ) : (
+            filteredResources.map((res: Resource) => (
             <div
               key={res.id}
-              className="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg flex flex-wrap items-center justify-between gap-3 text-xs"
+              className="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg flex flex-wrap items-center justify-between gap-3 text-xs card-interactive"
             >
               <div className="flex items-center gap-3">
                 <div className="font-mono font-bold text-sm text-blue-600 dark:text-blue-400 w-20">
@@ -162,7 +167,7 @@ export const ResourcesPage: React.FC = () => {
                 )}
               </div>
             </div>
-          ))}
+          )))}
         </div>
       </div>
     </div>
