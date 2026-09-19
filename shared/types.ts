@@ -183,6 +183,8 @@ export interface Incident {
   evidenceIds: string[];
   fused: FusedFacts;
   conflicts: Conflict[];
+  /** Product flag: true when sources disagree; fused people counts stay UNKNOWN. */
+  hasConflict: boolean;
   severity: 1 | 2 | 3 | 4 | 5;
   priority: PriorityBreakdown;
   responseDebt: ResponseDebtBreakdown;
@@ -364,3 +366,103 @@ export const SOCKET_EVENTS = [
 ] as const;
 
 export type SocketEventName = (typeof SOCKET_EVENTS)[number];
+
+export type CityStatus = "STABLE" | "STRAINED" | "CRITICAL";
+
+export interface CoverageSnapshot {
+  zones: Array<{
+    zoneId: string;
+    name: string;
+    minCoverage: CoverageCounts;
+    currentCoverage: CoverageCounts;
+    coverageStatus: CoverageStatus;
+    nearbyResourceIds: string[];
+  }>;
+  cityStatus: CityStatus;
+}
+
+export interface SocketPayloads {
+  "incident.created": { incident: Incident };
+  "incident.updated": { incident: Incident };
+  "resource.updated": { resource: Resource };
+  "hospital.updated": { hospital: Hospital };
+  "recommendation.created": { recommendation: Recommendation };
+  "coverage.updated": CoverageSnapshot;
+  "simulation.updated": { simulation: Simulation };
+  "system.alert": { event: SystemEvent };
+}
+
+export interface DemoTickAction {
+  type: "ACTIVATE_ROAD_EVENT" | "MARK_ROUTE_BLOCKED" | "RESOURCE_FAILURE";
+  evidenceId?: string;
+  routeId?: string;
+  resourceId?: string;
+  unavailableReason?: string;
+}
+
+export interface DemoTick {
+  offsetMinutes: number;
+  actions: DemoTickAction[];
+}
+
+/** Seed file shape: `mock-data/hackwell-city.json` */
+export interface CityWorld {
+  city: {
+    name: string;
+    center: GeoPoint;
+    demoClock: string;
+    disclaimer: string;
+  };
+  zones: Zone[];
+  hospitals: Hospital[];
+  resources: Resource[];
+  evidence: Evidence[];
+  incidents: Incident[];
+  routes: Route[];
+  recommendations: Recommendation[];
+  simulations: Simulation[];
+  systemEvents: SystemEvent[];
+  demoTicks: DemoTick[];
+}
+
+/**
+ * Adapter contract for Phase 2 mock ingest and future vendor feeds.
+ * Implementations live in `backend/src/adapters`. Do not call real 112/CCTV in the hackathon.
+ */
+export interface EvidenceAdapter {
+  sourceType: EvidenceSourceType;
+  ingest(raw: Record<string, unknown>): Omit<Evidence, "id"> | Evidence;
+}
+
+export const OPTIMIZATION_DEFAULT_WEIGHTS = {
+  k1: 0.9,
+  k2: 12,
+  k3: 4,
+  k4: 1,
+} as const;
+
+/** Seconds after last update before entity is stale (hackathon defaults). */
+export const STALE_TTL_SECONDS = {
+  resourceGps: 120,
+  hospitalFeed: 300,
+  cctvMetadata: 60,
+  trafficOrRoad: 180,
+  vehicleTelemetryBurst: 90,
+} as const;
+
+export const REST_PATHS = {
+  incidents: "/api/incidents",
+  incident: "/api/incidents/:id",
+  resources: "/api/resources",
+  resource: "/api/resources/:id",
+  hospitals: "/api/hospitals",
+  hospital: "/api/hospitals/:id",
+  recommendations: "/api/recommendations",
+  recommendationAccept: "/api/recommendations/:id/accept",
+  recommendationReject: "/api/recommendations/:id/reject",
+  recommendationModify: "/api/recommendations/:id/modify",
+  coverage: "/api/coverage",
+  simulations: "/api/simulations",
+  simulation: "/api/simulations/:id",
+  ingestEvidence: "/api/ingest/evidence",
+} as const;

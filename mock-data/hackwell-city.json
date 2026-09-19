@@ -251,7 +251,7 @@
       "location": { "lat": 12.964, "lng": 77.612, "accuracyMeters": 12 },
       "status": "TRANSPORTING",
       "etaMinutes": 5,
-      "assignmentIncidentId": "inc-resolved-placeholder",
+      "assignmentIncidentId": "inc-hist-01",
       "destinationHospitalId": "h-3",
       "lastUpdateAt": "2026-09-19T06:14:30.000Z",
       "freshnessSeconds": 30,
@@ -270,7 +270,7 @@
       "location": { "lat": 12.97, "lng": 77.608, "accuracyMeters": 12 },
       "status": "TRANSPORTING",
       "etaMinutes": 7,
-      "assignmentIncidentId": "inc-resolved-placeholder",
+      "assignmentIncidentId": "inc-hist-02",
       "destinationHospitalId": "h-3",
       "lastUpdateAt": "2026-09-19T06:14:25.000Z",
       "freshnessSeconds": 35,
@@ -887,6 +887,7 @@
           "resolution": "UNKNOWN_DUE_TO_CONFLICT"
         }
       ],
+      "hasConflict": true,
       "severity": 5,
       "priority": {
         "score": 92,
@@ -958,6 +959,7 @@
         "notes": ["No CCTV in zone-forest", "People counts not estimated from satellite"]
       },
       "conflicts": [],
+      "hasConflict": false,
       "severity": 4,
       "priority": {
         "score": 78,
@@ -1014,6 +1016,7 @@
         "notes": ["Count from caller, not clinical confirmation"]
       },
       "conflicts": [],
+      "hasConflict": false,
       "severity": 4,
       "priority": {
         "score": 80,
@@ -1062,6 +1065,7 @@
         "notes": ["Citizen 0 injuries not treated as fact"]
       },
       "conflicts": [],
+      "hasConflict": false,
       "severity": 2,
       "priority": {
         "score": 28,
@@ -1110,6 +1114,7 @@
         "notes": ["Single weak telemetry pattern"]
       },
       "conflicts": [],
+      "hasConflict": false,
       "severity": 2,
       "priority": {
         "score": 22,
@@ -1158,6 +1163,7 @@
         "notes": ["Lack of 112/108 is not all-clear"]
       },
       "conflicts": [],
+      "hasConflict": false,
       "severity": 3,
       "priority": {
         "score": 40,

@@ -57,7 +57,9 @@ AssignmentCost =
 | `ResourceSuitabilityPenalty` | 0 if capability match; `+15` if type ok but missing trauma/ALS/etc; `+999` if type mismatch (exclude) | |
 | `OtherIncidentImpact` | `k4 * sum(residualDebtIncrease)` estimated if this unit was the only nearby candidate for another open incident | |
 
-Constants `k1..k4` live in `optimization/src/weights.ts` (single file). Document values in UI “why this plan.”
+Constants `k1..k4` are frozen in `shared/types.ts` as `OPTIMIZATION_DEFAULT_WEIGHTS` until Phase 3 copies them to `optimization/` (single file). Seed recommendations use the same numbers. Document values in UI “why this plan.”
+
+**Hackathon defaults:** `k1 = 0.9`, `k2 = 12`, `k3 = 4`, `k4 = 1`.
 
 **Exclude:** `UNAVAILABLE`, `UNKNOWN`/stale location, already `EN_ROUTE` unless reassignment is an explicit what-if.
 

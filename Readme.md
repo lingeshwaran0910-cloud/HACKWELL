@@ -28,6 +28,17 @@ SafeCity fuses **available** evidence into incidents (with **UNKNOWN** and **con
 
 ---
 
+## Differentiators
+
+- **City-wide consequence checking** before dispatch (coverage, shortage, mutual aid, other incidents).
+- **Sensor-adaptive fusion** with explicit `UNKNOWN`, conflicts, observability, and silent anomalies.
+- **Deterministic assignment cost** — LLMs explain, they do not dispatch.
+- **Hospital matching** on capability, capacity, incoming load, and predicted pressure — not nearest-only.
+- **What-if simulation** labeled estimated; **human accept / modify / reject**.
+- **Re-optimization** when routes, units, hospitals, or new incidents change.
+
+---
+
 ## Architecture (modular monolith)
 
 ```

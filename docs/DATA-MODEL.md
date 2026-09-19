@@ -131,7 +131,8 @@ Only fields the source can honestly support:
 | `observability` | ObservabilityLevel | Live |
 | `evidenceIds` | string[] | All fused sources |
 | `fused` | FusedFacts | See below |
-| `conflicts` | Conflict[] | `conflict = true` if non-empty |
+| `conflicts` | Conflict[] | Source disagreements; never averaged |
+| `hasConflict` | boolean | `true` if `conflicts` is non-empty (`conflict = TRUE` in product copy) |
 | `severity` | 1–5 | Dynamic; explainable inputs |
 | `priority` | PriorityBreakdown | Not a black box |
 | `responseDebt` | ResponseDebtBreakdown | |
@@ -362,6 +363,7 @@ Incident 1──* Route
 Incident *──* Resource (assignment)
 Incident 0──1 Hospital (accepted destination)
 Incident 1──* SystemEvent (optional link)
+Resource 0──1 Incident (current assignment; historical transports may point at RESOLVED incidents)
 
 Recommendation 0──1 Simulation
 Recommendation 0──1 OperatorDecision (embedded or table)

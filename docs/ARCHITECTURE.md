@@ -2,7 +2,7 @@
 
 **SafeCity AI** is an adaptive emergency-response **coordination and decision-support** layer. It builds a live city situation model from whatever evidence is available, evaluates **city-wide consequences** of a response, and continuously re-plans as conditions change.
 
-This document is the Phase 1 logical architecture for a **24-hour hackathon prototype**. Production integrations are designed as adapters; the demo uses **controlled mock data** and **simulated feeds**.
+This document is the Phase 1 logical architecture for a **~4-hour hackathon prototype**. Production integrations are designed as adapters; the demo uses **controlled mock data** and **simulated feeds**.
 
 ---
 
@@ -27,7 +27,7 @@ This document is the Phase 1 logical architecture for a **24-hour hackathon prot
 4. **LLMs never choose the dispatch.** OpenAI (optional) may extract text, compare report similarity, or draft explanations. Assignment cost is **deterministic**.
 5. **Human-in-the-loop.** Recommendations are `PROPOSED` until an operator `ACCEPT` / `MODIFY` / `REJECT`.
 6. **Modular monolith.** One Node/Express process, one PostgreSQL database, in-process modules. No Kubernetes, Kafka, Redis, Docker, or microservice fleet for the hackathon.
-7. **Demo-first realism.** Fifteen scripted scenarios in `mock-data/` drive a convincing operator demo.
+7. **Demo-first realism.** Fifteen scripted scenarios in `mock-data/` drive a convincing operator demo. Target runtime: **one Express process + Vite + one Postgres (or in-memory fallback).**
 
 ---
 
