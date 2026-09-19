@@ -315,14 +315,18 @@ export interface Route {
   origin: GeoPoint;
   destination: GeoPoint;
   waypoints: GeoPoint[];
-  distanceKm: number;
-  etaMinutes: number;
+  distanceKm: number | null;
+  etaMinutes: number | null;
   routingMode: "OSRM" | "SIMULATED";
   blocked: boolean;
   trafficFactor: number;
   roadEventIds: string[];
   lastCalculatedAt: string;
   estimated: boolean;
+  routingStatus?: "SUCCESS" | "FALLBACK" | "UNAVAILABLE";
+  isSimulated?: boolean;
+  callSign?: string;
+  targetTitle?: string;
 }
 
 export interface SimulationPlanResult {
