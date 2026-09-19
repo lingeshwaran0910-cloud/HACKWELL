@@ -2,20 +2,20 @@
 
 **SafeCity AI** is an adaptive emergency-response **coordination and decision-support** layer. It builds a live city situation model from whatever evidence is available, evaluates **city-wide consequences** of a response, and continuously re-plans as conditions change.
 
-This document is the Phase 1 logical architecture for a **4-hour hackathon prototype**. Production integrations are designed as adapters; the demo uses **controlled mock data** and **simulated feeds**.
+This document is the Phase 1 logical architecture for a **24-hour hackathon prototype**. Production integrations are designed as adapters; the demo uses **controlled mock data** and **simulated feeds**.
 
 ---
 
 ## 1. What this system is (and is not)
 
-| This system is | This system is not |
-| --- | --- |
-| A live situation model + operator decision-support console | A simple “report an emergency” website |
-| Evidence fusion with explicit uncertainty | An oracle that invents victim counts or CCTV where none exists |
-| Deterministic optimization **recommending** dispatch | Autonomous life-critical dispatch |
-| Adaptive to available sensors per location | A CCTV-everywhere assumption |
+| This system is                                             | This system is not                                             |
+| ---------------------------------------------------------- | -------------------------------------------------------------- |
+| A live situation model + operator decision-support console | A simple “report an emergency” website                         |
+| Evidence fusion with explicit uncertainty                  | An oracle that invents victim counts or CCTV where none exists |
+| Deterministic optimization **recommending** dispatch       | Autonomous life-critical dispatch                              |
+| Adaptive to available sensors per location                 | A CCTV-everywhere assumption                                   |
 
-**Central differentiator:** SafeCity does not only find *a* response for an incident; it scores the **city-wide impact** of that response (coverage, other incidents, hospital pressure, routes, shortage) and **re-optimizes** when the world changes.
+**Central differentiator:** SafeCity does not only find _a_ response for an incident; it scores the **city-wide impact** of that response (coverage, other incidents, hospital pressure, routes, shortage) and **re-optimizes** when the world changes.
 
 ---
 
@@ -93,16 +93,16 @@ Not every incident walks every status. A single high-quality `EMERGENCY_CALL` pl
 
 One backend process. Folders are **modules**, not deployable services.
 
-| Module | Responsibility | Hackathon implementation |
-| --- | --- | --- |
-| `frontend/` | Operator console: map, incident board, coverage, hospital pressure, recommendations, what-if | React + Vite + TS + Tailwind + Leaflet + Recharts + Socket.IO client |
-| `backend/` | REST, Socket.IO, Prisma, orchestration, in-memory clock for mock time | Express + TypeScript + PostgreSQL |
-| `intelligence/` | Normalization helpers, fusion rules, conflict detection, observability, silent-anomaly flags, optional LLM extract/explain | Pure TS functions called by backend |
-| `optimization/` | Assignment cost, coverage, hospital matching, response debt, bottleneck detection, what-if | Pure TS functions; **no LLM in the cost function** |
-| `shared/` | Types, enums, API DTO shapes, event names | TypeScript contracts imported by other packages |
-| `mock-data/` | City seed, scenario scripts, simulated feed ticks | JSON + spec; adapters replay this |
-| `docs/` | Architecture and contracts (this folder) | Markdown |
-| `tests/` | Unit tests for fusion, cost, coverage, hospital ranking | Later phase |
+| Module          | Responsibility                                                                                                             | Hackathon implementation                                             |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `frontend/`     | Operator console: map, incident board, coverage, hospital pressure, recommendations, what-if                               | React + Vite + TS + Tailwind + Leaflet + Recharts + Socket.IO client |
+| `backend/`      | REST, Socket.IO, Prisma, orchestration, in-memory clock for mock time                                                      | Express + TypeScript + PostgreSQL                                    |
+| `intelligence/` | Normalization helpers, fusion rules, conflict detection, observability, silent-anomaly flags, optional LLM extract/explain | Pure TS functions called by backend                                  |
+| `optimization/` | Assignment cost, coverage, hospital matching, response debt, bottleneck detection, what-if                                 | Pure TS functions; **no LLM in the cost function**                   |
+| `shared/`       | Types, enums, API DTO shapes, event names                                                                                  | TypeScript contracts imported by other packages                      |
+| `mock-data/`    | City seed, scenario scripts, simulated feed ticks                                                                          | JSON + spec; adapters replay this                                    |
+| `docs/`         | Architecture and contracts (this folder)                                                                                   | Markdown                                                             |
+| `tests/`        | Unit tests for fusion, cost, coverage, hospital ranking                                                                    | Later phase                                                          |
 
 **Suggested backend internal packages (same process):**
 
@@ -125,11 +125,11 @@ Adapters implement `EvidenceAdapter.ingest(raw) → NormalizedEvidence`. Product
 
 Sources are first-class (`EvidenceSourceType`). **No source is required everywhere.**
 
-| Context (example) | Typical available sources | Observability |
-| --- | --- | --- |
-| Urban core | CCTV metadata, 112/108, traffic, GPS, citizen reports | `HIGH` |
-| Remote highway | Calls, vehicle telemetry, traffic, satellite (wide-area only) | `PARTIAL` |
-| Forest / peri-urban | Satellite, weather, IoT/fire sensors, sparse calls | `LOW` |
+| Context (example)   | Typical available sources                                     | Observability |
+| ------------------- | ------------------------------------------------------------- | ------------- |
+| Urban core          | CCTV metadata, 112/108, traffic, GPS, citizen reports         | `HIGH`        |
+| Remote highway      | Calls, vehicle telemetry, traffic, satellite (wide-area only) | `PARTIAL`     |
+| Forest / peri-urban | Satellite, weather, IoT/fire sensors, sparse calls            | `LOW`         |
 
 **Observability** (`HIGH` | `PARTIAL` | `LOW`) is a property of the **place + currently fresh sources**, not proof of safety. Lack of evidence ≠ no incident. Silent/unreported anomalies are flagged when traffic/telemetry/satellite disagree with “no incident” in that cell.
 
@@ -195,13 +195,13 @@ No complete frontend/backend, no Prisma migrations, no OpenAI calls, no optimize
 
 ## 11. Related documents
 
-| Doc | Content |
-| --- | --- |
-| [DATA-MODEL.md](./DATA-MODEL.md) | Entities, fields, relationships |
-| [API-CONTRACT.md](./API-CONTRACT.md) | REST + future adapters |
-| [EVENT-FLOW.md](./EVENT-FLOW.md) | Lifecycle + Socket.IO |
-| [AI-LOGIC.md](./AI-LOGIC.md) | Fusion, confidence, LLM boundaries |
-| [OPTIMIZATION.md](./OPTIMIZATION.md) | Cost, coverage, hospitals, debt |
-| [DEMO-SCENARIOS.md](./DEMO-SCENARIOS.md) | Operator demo narrative |
-| [../mock-data/SPEC.md](../mock-data/SPEC.md) | Seed data specification |
-| [DEVELOPMENT-PLAN.md](./DEVELOPMENT-PLAN.md) | Timed hackathon phases |
+| Doc                                          | Content                            |
+| -------------------------------------------- | ---------------------------------- |
+| [DATA-MODEL.md](./DATA-MODEL.md)             | Entities, fields, relationships    |
+| [API-CONTRACT.md](./API-CONTRACT.md)         | REST + future adapters             |
+| [EVENT-FLOW.md](./EVENT-FLOW.md)             | Lifecycle + Socket.IO              |
+| [AI-LOGIC.md](./AI-LOGIC.md)                 | Fusion, confidence, LLM boundaries |
+| [OPTIMIZATION.md](./OPTIMIZATION.md)         | Cost, coverage, hospitals, debt    |
+| [DEMO-SCENARIOS.md](./DEMO-SCENARIOS.md)     | Operator demo narrative            |
+| [../mock-data/SPEC.md](../mock-data/SPEC.md) | Seed data specification            |
+| [DEVELOPMENT-PLAN.md](./DEVELOPMENT-PLAN.md) | Timed hackathon phases             |
