@@ -1,0 +1,167 @@
+// Prisma Schema for SafeCity AI REST API Layer
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Zone {
+  id                    String   @id
+  name                  String
+  polygon               String   // JSON string of GeoPoint[]
+  center                String   // JSON string of GeoPoint
+  observabilityBaseline String
+  typicalSourceTypes    String   // JSON string of EvidenceSourceType[]
+  neighboringZoneIds    String   // JSON string of string[]
+  minCoverage           String   // JSON string of CoverageCounts
+  currentCoverage        String   // JSON string of CoverageCounts
+  coverageStatus        String
+  nearbyResourceIds     String   // JSON string of string[]
+  updatedAt             String
+}
+
+model Hospital {
+  id                String   @id
+  name              String
+  location          String   // JSON string of GeoPoint
+  zoneId            String
+  capabilities      String   // JSON string of string[]
+  bedsTotal         Int
+  bedsAvailable     String   // JSON string (Int or "UNKNOWN")
+  currentLoad       String   // JSON string (Int or "UNKNOWN")
+  incomingLoad      Int
+  predictedPressure String   // JSON string of PredictedPressure
+  lastUpdateAt      String
+  stale             Boolean
+  updatedAt         String
+}
+
+model Resource {
+  id                    String   @id
+  callSign              String
+  type                  String
+  capabilities          String   // JSON string of string[]
+  homeZoneId            String
+  location              String?  // JSON string of GeoPoint or null
+  status                String
+  etaMinutes            Float?
+  assignmentIncidentId  String?
+  destinationHospitalId String?
+  lastUpdateAt          String
+  freshnessSeconds      Int
+  stale                 Boolean
+  staleReason           String?
+  unavailableReason     String?
+  isReserve             Boolean
+  updatedAt             String
+}
+
+model Incident {
+  id                         String   @id
+  type                       String
+  status                     String
+  title                      String
+  description                String
+  location                   String   // JSON string of GeoPoint
+  locationUncertaintyMeters Float?
+  zoneId                     String
+  observability              String
+  evidenceIds                String   // JSON string of string[]
+  fused                      String   // JSON string of FusedFacts
+  conflicts                  String   // JSON string of Conflict[]
+  hasConflict                Boolean
+  severity                   Int
+  priority                   String   // JSON string of PriorityBreakdown
+  responseDebt               String   // JSON string of ResponseDebtBreakdown
+  secondaryRisks             String   // JSON string of SecondaryRisk[]
+  rippleEffects              String   // JSON string of RippleLink[]
+  assignedResourceIds        String   // JSON string of string[]
+  recommendedHospitalId      String?
+  activeRouteIds             String   // JSON string of string[]
+  shortageFlags              String   // JSON string of string[]
+  verificationRequired       Boolean
+  silentAnomaly              Boolean
+  createdAt                  String
+  updatedAt                  String
+  firstReportedAt            String
+  resolvedAt                 String?
+}
+
+model Evidence {
+  id               String   @id
+  sourceType       String
+  timestamp        String
+  ingestedAt       String
+  location         String?  // JSON string of GeoPoint or null
+  incidentId       String?
+  raw              String   // JSON string
+  normalized       String   // JSON string of NormalizedPayload
+  confidence       Float
+  freshnessSeconds Int
+  stale            Boolean
+  metadata         String   // JSON string
+}
+
+model Route {
+  id               String   @id
+  resourceId       String
+  incidentId       String?
+  hospitalId       String?
+  origin           String   // JSON string of GeoPoint
+  destination      String   // JSON string of GeoPoint
+  waypoints        String   // JSON string of GeoPoint[]
+  distanceKm       Float?
+  etaMinutes       Float?
+  routingMode      String
+  blocked          Boolean
+  trafficFactor    Float
+  roadEventIds     String   // JSON string of string[]
+  lastCalculatedAt String
+  estimated        Boolean
+  routingStatus    String?
+  isSimulated      Boolean?
+  callSign         String?
+  targetTitle      String?
+}
+
+model Recommendation {
+  id                 String   @id
+  incidentId         String
+  relatedIncidentIds String   // JSON string of string[]
+  state              String
+  createdAt          String
+  plan               String   // JSON string of DispatchPlan
+  cost               String   // JSON string of AssignmentCostBreakdown
+  reasons            String   // JSON string of string[]
+  coverageImpact     String   // JSON string of CoverageImpact[]
+  shortage           String?  // JSON string of ShortageReport or null
+  simulationId       String?
+  decision           String?  // JSON string of OperatorDecision or null
+  updatedAt          String
+}
+
+model SystemEvent {
+  id         String   @id
+  type       String
+  severity   String
+  timestamp  String
+  entityType String?
+  entityId   String?
+  payload    String   // JSON string
+  message    String
+}
+
+model Simulation {
+  id          String   @id
+  label       String
+  createdAt   String
+  assumptions String   // JSON string
+  plans       String   // JSON string
+  comparison  String   // JSON string
+  simulated   Boolean  @default(true)
+  disclaimer  String
+}

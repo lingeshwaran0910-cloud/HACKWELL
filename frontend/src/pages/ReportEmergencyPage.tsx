@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { reportsApi, ReportDocument as BackendReport } from '../services/apiService';
 import {
   AlertTriangle,
   MapPin,
@@ -13,12 +14,9 @@ import {
   Shield,
   Loader2,
   ArrowRight,
-  ExternalLink,
 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from '../components/common/ThemeToggle';
-import { Incident } from '@shared/types';
 
 interface FileItem {
   id: string;
@@ -57,7 +55,6 @@ const SOURCE_TYPES = [
 
 export const ReportEmergencyPage: React.FC = () => {
   const navigate = useNavigate();
-  const { reportIncident } = useApp();
   const { isAuthenticated } = useAuth();
 
   // Form State
@@ -76,7 +73,8 @@ export const ReportEmergencyPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isLocating, setIsLocating] = useState<boolean>(false);
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
-  const [createdIncident, setCreatedIncident] = useState<Incident | null>(null);
+  const [createdIncident, setCreatedIncident] = useState<BackendReport | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
 
   // Helper to format file sizes cleanly
@@ -152,7 +150,7 @@ export const ReportEmergencyPage: React.FC = () => {
   };
 
   // Form Validation & Submit
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const newErrors: { description?: string; address?: string; lat?: string; lng?: string } = {};
@@ -182,16 +180,16 @@ export const ReportEmergencyPage: React.FC = () => {
     }
 
     setErrors({});
+    setSubmitError(null);
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      const newInc = reportIncident({
+    try {
+      const result = await reportsApi.create({
         type: incidentType,
         severity,
         description: description.trim(),
         address: address.trim(),
-        lat: latNum,
-        lng: lngNum,
+        location: { lat: latNum, lng: lngNum },
         sourceType,
         confidence: confidence / 100,
         evidenceFiles: evidenceFiles.map((f) => ({
@@ -200,10 +198,13 @@ export const ReportEmergencyPage: React.FC = () => {
           type: f.type,
         })),
       });
-
+      setCreatedIncident(result.report);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to submit report. Please try again.';
+      setSubmitError(msg);
+    } finally {
       setIsSubmitting(false);
-      setCreatedIncident(newInc);
-    }, 600);
+    }
   };
 
   const handleResetForm = () => {
@@ -270,8 +271,8 @@ export const ReportEmergencyPage: React.FC = () => {
                 </strong>
               </div>
               <div>
-                <span className="text-[10px] uppercase font-semibold text-slate-400 block">Incident Title</span>
-                <strong className="text-slate-900 dark:text-slate-100 font-semibold">{createdIncident.title}</strong>
+                <span className="text-[10px] uppercase font-semibold text-slate-400 block">Incident Type</span>
+                <strong className="text-slate-900 dark:text-slate-100 font-semibold">{createdIncident.type}</strong>
               </div>
               <div>
                 <span className="text-[10px] uppercase font-semibold text-slate-400 block">Severity & Status</span>
@@ -295,25 +296,7 @@ export const ReportEmergencyPage: React.FC = () => {
                 Submit Another Emergency Report
               </button>
 
-              {isAuthenticated ? (
-                <>
-                  <button
-                    onClick={() => navigate(`/incidents/${createdIncident.id}`, { state: { selectedIncidentId: createdIncident.id } })}
-                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-semibold transition-colors shadow-xs cursor-pointer flex items-center gap-1.5"
-                  >
-                    <span>View in Incident Queue</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </button>
-
-                  <button
-                    onClick={() => navigate('/map', { state: { center: createdIncident.location, selectedIncidentId: createdIncident.id } })}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition-colors shadow-xs cursor-pointer flex items-center gap-1.5"
-                  >
-                    <span>View on Live Map</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </>
-              ) : (
+              {!isAuthenticated && (
                 <button
                   onClick={() => navigate('/login')}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition-colors shadow-xs cursor-pointer flex items-center gap-1.5"
@@ -327,6 +310,12 @@ export const ReportEmergencyPage: React.FC = () => {
         ) : (
           /* FORM FORMULATION */
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Submit Error Banner */}
+            {submitError && (
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-700 rounded-xl text-xs text-rose-700 dark:text-rose-300 font-medium">
+                ⚠ {submitError}
+              </div>
+            )}
             
             {/* MAIN TWO COLUMN DESKTOP GRID */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">

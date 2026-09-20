@@ -1,38 +1,54 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Shield, Eye, EyeOff, ArrowRight, ShieldCheck, Lock, PlusCircle } from 'lucide-react';
+import { Shield, Eye, EyeOff, ArrowRight, ShieldCheck, Lock, PlusCircle, Loader2 } from 'lucide-react';
 import { useAuth, DEMO_ACCOUNTS, UserProfile } from '../context/AuthContext';
 import { ThemeToggle } from '../components/common/ThemeToggle';
 
+// Username mapping from demo account display to actual login username
+const ACCOUNT_USERNAME_MAP: Record<string, string> = {
+  'EOC-001': 'lingesh',
+  'MED-002': 'sivakumar',
+  'FIR-003': 'abishek',
+  'INT-004': 'balamurugan',
+};
+
+const ACCOUNT_PASSWORD_HINT: Record<string, string> = {
+  'EOC-001': 'lingesh1234',
+  'MED-002': 'sivakumar1234',
+  'FIR-003': 'abishek1234',
+  'INT-004': 'balamurugan1234',
+};
+
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isLoading } = useAuth();
 
-  const [operatorId, setOperatorId] = useState<string>('EOC-001');
-  const [password, setPassword] = useState<string>('safecity2026');
-  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [selectedAccount, setSelectedAccount] = useState<UserProfile>(DEMO_ACCOUNTS[0]);
+  const [operatorId, setOperatorId] = useState<string>(ACCOUNT_USERNAME_MAP['EOC-001']);
+  const [password, setPassword] = useState<string>(ACCOUNT_PASSWORD_HINT['EOC-001']);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleSelectAccount = (acc: UserProfile) => {
     setSelectedAccount(acc);
-    setOperatorId(acc.operatorId);
-    setPassword('safecity2026');
+    setOperatorId(ACCOUNT_USERNAME_MAP[acc.operatorId] ?? acc.operatorId.toLowerCase());
+    setPassword(ACCOUNT_PASSWORD_HINT[acc.operatorId] ?? '');
     setErrorMsg(null);
   };
 
-  const handleSignIn = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!operatorId.trim()) {
-      setErrorMsg('Invalid operator ID or password.');
+      setErrorMsg('Invalid username or password.');
       return;
     }
 
-    const success = login(operatorId, password);
+    setErrorMsg(null);
+    const success = await login(operatorId.trim(), password);
     if (success) {
       navigate('/');
     } else {
-      setErrorMsg('Invalid operator ID or password.');
+      setErrorMsg('Invalid username or password.');
     }
   };
 
@@ -56,10 +72,7 @@ export const LoginPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Light / Dark Mode Toggle */}
           <ThemeToggle />
-
-          {/* Public Report Button */}
           <Link
             to="/report-emergency"
             className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-2 cursor-pointer border border-rose-500/40"
@@ -118,7 +131,7 @@ export const LoginPage: React.FC = () => {
 
                   <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800/80">
                     <span className="truncate">{acc.role}</span>
-                    <span className="font-mono text-slate-400 shrink-0 ml-1">{acc.department}</span>
+                    <span className="font-mono text-slate-400 shrink-0 ml-1">{acc.department.split(' ')[0]}</span>
                   </div>
                 </div>
               );
@@ -142,7 +155,7 @@ export const LoginPage: React.FC = () => {
           <form onSubmit={handleSignIn} className="space-y-4 text-xs font-sans">
             <div className="space-y-1.5">
               <label htmlFor="operatorId" className="font-semibold text-slate-700 dark:text-slate-300 block text-[11px]">
-                Operator ID or Email
+                Username
               </label>
               <input
                 id="operatorId"
@@ -152,9 +165,10 @@ export const LoginPage: React.FC = () => {
                   setOperatorId(e.target.value);
                   setErrorMsg(null);
                 }}
-                placeholder="e.g. EOC-001 or Lingeshwaran"
+                placeholder="e.g. lingesh"
                 required
-                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 font-mono text-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
+                disabled={isLoading}
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 font-mono text-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all disabled:opacity-60"
               />
             </div>
 
@@ -173,7 +187,8 @@ export const LoginPage: React.FC = () => {
                   }}
                   placeholder="Password"
                   required
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg pl-3 pr-9 py-2 text-slate-900 dark:text-slate-100 font-mono text-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
+                  disabled={isLoading}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg pl-3 pr-9 py-2 text-slate-900 dark:text-slate-100 font-mono text-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all disabled:opacity-60"
                 />
                 <button
                   type="button"
@@ -186,7 +201,7 @@ export const LoginPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Small Inline Error State */}
+            {/* Error State */}
             {errorMsg && (
               <p className="text-[11px] text-rose-600 dark:text-rose-400 font-medium pt-0.5">
                 {errorMsg}
@@ -195,10 +210,20 @@ export const LoginPage: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-2 text-xs"
+              disabled={isLoading}
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold rounded-lg shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-2 text-xs"
             >
-              <span>Sign In as {selectedAccount.name}</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Signing in...</span>
+                </>
+              ) : (
+                <>
+                  <span>Sign In as {selectedAccount.name}</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </>
+              )}
             </button>
           </form>
 
