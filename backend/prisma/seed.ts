@@ -1,11 +1,99 @@
 import { PrismaClient } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+// ─── Demo Users ───────────────────────────────────────────────────────────────
+// SECURITY: passwords are bcrypt-hashed before storage. Plaintext only exists
+// in this array during seed script execution and is never persisted anywhere.
+const DEMO_USERS = [
+  {
+    username: 'lingesh',
+    password: 'lingesh1234',
+    name: 'Lingeshwaran',
+    role: 'EOC Shift Lead',
+    department: 'Emergency Operations Center',
+    operatorId: 'EOC-001',
+    avatar: 'L',
+    permissions: JSON.stringify(['ALL']),
+    email: 'lingesh@safecity.local',
+  },
+  {
+    username: 'sivakumar',
+    password: 'sivakumar1234',
+    name: 'Siva Kumar',
+    role: 'Medical Operations Officer',
+    department: 'Emergency Medical Services',
+    operatorId: 'MED-002',
+    avatar: 'SK',
+    permissions: JSON.stringify(['INCIDENTS', 'HOSPITALS', 'AMBULANCES', 'MAP']),
+    email: 'sivakumar@safecity.local',
+  },
+  {
+    username: 'abishek',
+    password: 'abishek1234',
+    name: 'Abishek',
+    role: 'Fire Operations Officer',
+    department: 'Fire & Rescue Service',
+    operatorId: 'FIR-003',
+    avatar: 'A',
+    permissions: JSON.stringify(['INCIDENTS', 'FIRE_RESOURCES', 'MAP', 'ACTIVITY']),
+    email: 'abishek@safecity.local',
+  },
+  {
+    username: 'balamurugan',
+    password: 'balamurugan1234',
+    name: 'Bala Murugan',
+    role: 'City Intelligence Lead',
+    department: 'Urban Intelligence & GIS',
+    operatorId: 'INT-004',
+    avatar: 'BM',
+    permissions: JSON.stringify(['ALL']),
+    email: 'balamurugan@safecity.local',
+  },
+];
+
+async function seedUsers() {
+  console.log('Seeding demo users...');
+  for (const userData of DEMO_USERS) {
+    const { password, ...rest } = userData;
+    const passwordHash = await bcrypt.hash(password, 12);
+    const now = new Date().toISOString();
+    await prisma.user.upsert({
+      where: { username: rest.username },
+      update: {
+        // Update name, role, operatorId — but preserve existing password hash
+        // unless explicitly re-seeding (use update: {} to skip password reset)
+        name: rest.name,
+        role: rest.role,
+        department: rest.department,
+        operatorId: rest.operatorId,
+        avatar: rest.avatar,
+        permissions: rest.permissions,
+        email: rest.email,
+        updatedAt: now,
+        active: true,
+      },
+      create: {
+        ...rest,
+        passwordHash,
+        createdAt: now,
+        updatedAt: now,
+        active: true,
+      },
+    });
+    console.log(`  ✓ User: ${rest.username} (${rest.name}, ${rest.operatorId})`);
+  }
+  console.log(`Seeded ${DEMO_USERS.length} demo users.`);
+}
+
 async function main() {
   console.log('Seeding SafeCity AI data from hackwell-city.json...');
+
+  // Seed demo users first (idempotent — uses upsert, never deletes users)
+  await seedUsers();
 
   const dataPath = path.resolve(__dirname, '../../mock-data/hackwell-city.json');
   if (!fs.existsSync(dataPath)) {

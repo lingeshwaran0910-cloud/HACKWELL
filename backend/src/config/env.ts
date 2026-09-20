@@ -7,13 +7,20 @@ const envSchema = z.object({
   DATABASE_URL: z
     .string()
     .min(1, "DATABASE_URL is required")
-    .default("postgresql://postgres:postgres@localhost:5432/safecity?schema=public"),
+    .default("file:./dev.db"),
   PORT: z.coerce.number().positive().default(4000),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace"])
     .default("info"),
+  // JWT Authentication
+  JWT_SECRET: z
+    .string()
+    .min(16, "JWT_SECRET must be at least 16 characters")
+    .default("safecity-dev-jwt-secret-change-in-production-2024"),
+  JWT_EXPIRES_IN: z.string().default("8h"),
+  // Firebase — optional, only needed if using Firestore features
   FIREBASE_PROJECT_ID: z.string().optional().default("safecity-ai-dev"),
   FIRESTORE_EMULATOR_HOST: z.string().optional(),
 });

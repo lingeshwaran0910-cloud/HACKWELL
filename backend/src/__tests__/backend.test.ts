@@ -161,7 +161,35 @@ describe("POST /api/auth/login", () => {
     expect(res.status).toBe(401);
     expect(res.body.error.message).toBe("Invalid username or password");
   });
+
+  it("authenticates operator lingesh / lingesh1234 successfully", async () => {
+    const res = await request(app)
+      .post("/api/auth/login")
+      .send({ username: "lingesh", password: "lingesh1234" })
+      .set("Content-Type", "application/json");
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body).toHaveProperty("customToken");
+    expect(typeof res.body.customToken).toBe("string");
+    expect(res.body.user).toMatchObject({
+      username: "lingesh",
+      name: "Lingeshwaran",
+      role: "EOC Shift Lead",
+      operatorId: "EOC-001",
+    });
+  });
+
+
+  it("rejects lingesh with wrong password", async () => {
+    const res = await request(app)
+      .post("/api/auth/login")
+      .send({ username: "lingesh", password: "wrongpassword" })
+      .set("Content-Type", "application/json");
+    expect(res.status).toBe(401);
+    expect(res.body.error.message).toBe("Invalid username or password");
+  });
 });
+
 
 // ─── Report Validation ────────────────────────────────────────────────────────
 describe("Report schema validation", () => {
@@ -262,7 +290,28 @@ describe("Authentication middleware", () => {
       .set("Authorization", "Bearer invalid-token-here");
     expect(res.status).toBe(401);
   });
+
+  it("allows access to protected route with valid token", async () => {
+    const loginRes = await request(app)
+      .post("/api/auth/login")
+      .send({ username: "lingesh", password: "lingesh1234" });
+    const token = loginRes.body.customToken;
+
+    const res = await request(app)
+      .get("/api/auth/me")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.user).toMatchObject({
+      username: "lingesh",
+      name: "Lingeshwaran",
+      operatorId: "EOC-001",
+    });
+  });
+
+
 });
+
 
 // ─── Error handling ───────────────────────────────────────────────────────────
 describe("Error handling", () => {

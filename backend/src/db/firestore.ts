@@ -9,7 +9,9 @@ export interface QueryFilter {
 
 export class FirestoreService {
   get db() {
-    return getFirestore();
+    const db = getFirestore();
+    if (!db) throw new Error("Firestore is not initialized. Configure Firebase credentials to use Firestore features.");
+    return db;
   }
 
   collection(name: string) {
