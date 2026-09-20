@@ -1,30 +1,31 @@
 /**
  * SafeCity AI — Authentication Service
  *
- * Implements username+password login via Firebase Authentication.
+ * Local bcrypt + JWT authentication using Prisma SQLite.
+ * No Firebase dependency required for development or production.
  *
  * Strategy:
- * - Usernames are mapped to Firebase emails via: `username@safecity.local`
- * - Firebase Authentication manages password verification (no plaintext passwords stored)
- * - Firestore stores user profiles: users/{uid}
- * - Firestore stores username index: usernameIndex/{normalizedUsername}
+ * - Usernames are stored in the Prisma `User` table (unique, lowercased)
+ * - Passwords are stored as bcrypt hashes — NEVER plaintext
+ * - Authentication returns a JWT signed with JWT_SECRET
+ * - The JWT is sent as a Bearer token in subsequent requests
+ * - authMiddleware verifies the JWT and attaches req.user
  *
  * Security:
- * - Never expose whether a username exists (generic error message for both cases)
- * - Never store passwords in Firestore
- * - Tokens verified server-side using Firebase Admin SDK
+ * - Generic error message for both wrong username and wrong password
+ * - Inactive accounts are rejected with the same generic error
+ * - Password hash is NEVER included in any API response
  */
 
-import { getAuth, getFirestore } from "../config/firebase";
-import { COLLECTIONS } from "../db/collections";
-import { firestoreService } from "../db/firestore";
-import { ConflictError, UnauthorizedError } from "../utils/errors";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { prisma } from "../db/prisma";
+import { env } from "../config/env";
 import { logger } from "../config/logger";
+import { ConflictError, UnauthorizedError } from "../utils/errors";
 import type { LoginInput, RegisterInput } from "../validators/auth.validator";
 
-const normalizeUsername = (username: string) => username.toLowerCase().trim();
-const usernameToEmail = (username: string) =>
-  `${normalizeUsername(username)}@safecity.local`;
+// ─── Public types ─────────────────────────────────────────────────────────────
 
 export interface UserProfile {
   uid: string;
@@ -41,124 +42,167 @@ export interface UserProfile {
 }
 
 export interface LoginResult {
+  /** JWT token — named "customToken" for frontend API compatibility */
   customToken: string;
   user: UserProfile;
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const normalizeUsername = (username: string) => username.toLowerCase().trim();
+
 /**
- * Login with username + password.
- * Returns a Firebase custom token that the frontend can use to sign in.
- *
- * We verify credentials by checking if the Firebase Auth user exists and
- * then generate a custom token — the actual password check is handled
- * by the Firebase client SDK on the frontend (signInWithEmailAndPassword).
+ * Converts a Prisma User row to the public UserProfile shape.
+ * Never includes passwordHash.
  */
+function toUserProfile(user: {
+  id: string;
+  username: string;
+  name: string;
+  role: string;
+  department: string;
+  operatorId: string | null;
+  avatar: string;
+  permissions: string;
+  email: string;
+  createdAt: string;
+  updatedAt: string;
+}): UserProfile {
+  let permissions: string[] = ["INCIDENTS", "MAP"];
+  try {
+    const parsed = JSON.parse(user.permissions);
+    if (Array.isArray(parsed)) permissions = parsed;
+  } catch {
+    // keep default
+  }
+  return {
+    uid: user.id,
+    username: user.username,
+    name: user.name,
+    role: user.role,
+    department: user.department,
+    operatorId: user.operatorId ?? undefined,
+    avatar: user.avatar,
+    permissions,
+    email: user.email,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+}
+
+/**
+ * Signs a JWT for the given user ID.
+ */
+function signToken(uid: string): string {
+  return jwt.sign(
+    { sub: uid, type: "access" },
+    env.JWT_SECRET,
+    { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] }
+  );
+}
+
+// ─── Login Service ────────────────────────────────────────────────────────────
+
 export const loginService = {
   /**
-   * Looks up username → uid from index, then returns profile + generates
-   * a custom token signed by the Admin SDK.
-   * The client will use this token with signInWithCustomToken() to get an ID token.
+   * Authenticates with username + password.
+   * Returns a JWT (as `customToken`) and user profile.
+   * Never reveals whether the username exists vs password is wrong.
    */
   async login(input: LoginInput): Promise<LoginResult> {
     const normalizedUsername = normalizeUsername(input.username);
 
-    // Look up username in the index
-    const usernameDoc = await firestoreService.getDocument<{ uid: string; username: string }>(
-      COLLECTIONS.USERNAME_INDEX,
-      normalizedUsername
-    );
+    const user = await prisma.user.findUnique({
+      where: { username: normalizedUsername },
+    });
 
-    if (!usernameDoc) {
-      // Generic error — do not reveal if username exists
+    if (!user) {
+      logger.warn({ username: normalizedUsername }, "Login failed: username not found");
       throw new UnauthorizedError("Invalid username or password");
     }
 
-    // Generate a custom token for the client to use
-    const auth = getAuth();
-    let customToken: string;
-    try {
-      customToken = await auth.createCustomToken(usernameDoc.uid, {
-        username: normalizedUsername,
-      });
-    } catch (err) {
-      logger.error({ err, username: normalizedUsername }, "Failed to create custom token");
+    if (!user.active) {
+      logger.warn({ username: normalizedUsername, uid: user.id }, "Login failed: account inactive");
       throw new UnauthorizedError("Invalid username or password");
     }
 
-    // Fetch user profile
-    const profile = await firestoreService.getDocument<UserProfile>(
-      COLLECTIONS.USERS,
-      usernameDoc.uid
-    );
-
-    if (!profile) {
-      logger.error({ uid: usernameDoc.uid }, "User exists in Auth but not in Firestore");
+    const passwordValid = await bcrypt.compare(input.password, user.passwordHash);
+    if (!passwordValid) {
+      logger.warn({ username: normalizedUsername }, "Login failed: wrong password");
       throw new UnauthorizedError("Invalid username or password");
     }
 
-    logger.info({ username: normalizedUsername, uid: usernameDoc.uid }, "User login successful");
+    const token = signToken(user.id);
 
-    return { customToken, user: profile };
+    logger.info({ username: normalizedUsername, uid: user.id }, "User login successful");
+
+    return {
+      customToken: token,
+      user: toUserProfile(user),
+    };
   },
 };
+
+// ─── Register Service ─────────────────────────────────────────────────────────
 
 export const registerService = {
   async register(input: RegisterInput): Promise<{ user: UserProfile }> {
     const normalizedUsername = normalizeUsername(input.username);
-    const email = usernameToEmail(normalizedUsername);
+    const email = `${normalizedUsername}@safecity.local`;
 
-    // Check username uniqueness in index
-    const existing = await firestoreService.getDocument(
-      COLLECTIONS.USERNAME_INDEX,
-      normalizedUsername
-    );
-
+    const existing = await prisma.user.findUnique({
+      where: { username: normalizedUsername },
+    });
     if (existing) {
       throw new ConflictError("Username is already taken");
     }
 
-    const auth = getAuth();
-    const db = getFirestore();
-
-    // Create Firebase Auth account (handles password hashing)
-    const authUser = await auth.createUser({
-      email,
-      password: input.password,
-      displayName: input.name,
-    });
-
-    const uid = authUser.uid;
+    const passwordHash = await bcrypt.hash(input.password, 12);
     const now = new Date().toISOString();
 
-    const profile: UserProfile = {
-      uid,
-      username: normalizedUsername,
-      name: input.name,
-      role: input.role ?? "Operator",
-      department: input.department ?? "Emergency Operations",
-      email,
-      permissions: ["INCIDENTS", "MAP"],
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    // Save profile — NO password field
-    await db.collection(COLLECTIONS.USERS).doc(uid).set(profile);
-
-    // Save username index
-    await db.collection(COLLECTIONS.USERNAME_INDEX).doc(normalizedUsername).set({
-      uid,
-      username: normalizedUsername,
-      updatedAt: now,
+    const user = await prisma.user.create({
+      data: {
+        username: normalizedUsername,
+        passwordHash,
+        name: input.name,
+        role: input.role ?? "Operator",
+        department: input.department ?? "Emergency Operations",
+        email,
+        permissions: JSON.stringify(["INCIDENTS", "MAP"]),
+        createdAt: now,
+        updatedAt: now,
+      },
     });
 
-    logger.info({ uid, username: normalizedUsername }, "New user registered");
-    return { user: profile };
+    logger.info({ uid: user.id, username: normalizedUsername }, "New user registered");
+    return { user: toUserProfile(user) };
   },
 };
+
+// ─── Profile Service ──────────────────────────────────────────────────────────
 
 export const profileService = {
   async getProfile(uid: string): Promise<UserProfile | null> {
-    return firestoreService.getDocument<UserProfile>(COLLECTIONS.USERS, uid);
+    const user = await prisma.user.findUnique({ where: { id: uid } });
+    if (!user) return null;
+    return toUserProfile(user);
   },
 };
+
+// ─── Token Verification ───────────────────────────────────────────────────────
+
+export interface JwtPayload {
+  sub: string;
+  type: string;
+  iat: number;
+  exp: number;
+}
+
+/**
+ * Verifies a JWT and returns the decoded payload.
+ * Throws if the token is invalid or expired.
+ */
+export function verifyToken(token: string): JwtPayload {
+  return jwt.verify(token, env.JWT_SECRET) as JwtPayload;
+}
+

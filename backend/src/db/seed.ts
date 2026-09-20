@@ -1,11 +1,11 @@
 /**
- * SafeCity AI — Demo User Seeding Script
+ * SafeCity AI — Firebase Demo User Seeding Script (OPTIONAL)
  *
- * Creates the four initial demo Firebase Authentication accounts and
- * corresponding Firestore user profiles + username index documents.
+ * This script seeds users into Firebase Auth + Firestore.
+ * It is OPTIONAL — the primary user seeding now uses Prisma (prisma/seed.ts).
  *
- * SECURITY: Passwords are managed ONLY by Firebase Authentication.
- * Plaintext passwords are NEVER stored in Firestore.
+ * Only run this if you have Firebase configured and want to mirror users
+ * into Firebase Auth as well.
  *
  * This script is IDEMPOTENT — running it multiple times is safe.
  */
@@ -13,7 +13,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import { initFirebase, getAuth, getFirestore } from "../config/firebase";
+import { initFirebase, isFirebaseAvailable } from "../config/firebase";
 import { COLLECTIONS } from "./collections";
 
 interface DemoUser {
@@ -71,32 +71,42 @@ const DEMO_USERS: DemoUser[] = [
   },
 ];
 
-/**
- * Normalizes a username for consistent lookup (lowercase, trimmed).
- */
 const normalizeUsername = (username: string) => username.toLowerCase().trim();
-
-/**
- * Converts username to a synthetic Firebase email format.
- * Firebase Authentication requires email; we map usernames via this convention.
- */
 const usernameToEmail = (username: string) =>
   `${normalizeUsername(username)}@safecity.local`;
 
 interface SeedResult {
   username: string;
   uid: string;
-  status: "created" | "verified" | "error";
+  status: "created" | "verified" | "error" | "skipped";
   error?: string;
 }
 
 async function seedDemoUsers(): Promise<void> {
-  console.log("🌱 SafeCity AI — Demo User Seeding Script");
+  console.log("🌱 SafeCity AI — Firebase Demo User Seeding Script");
   console.log("==========================================");
 
+  // Initialize Firebase — this is now graceful and returns null if not configured
   initFirebase();
+
+  if (!isFirebaseAvailable()) {
+    console.log(
+      "⚠️  Firebase is not configured. Skipping Firebase user seeding.\n" +
+      "   Primary user seeding uses Prisma (run: npm run seed instead).\n" +
+      "   To enable Firebase seeding, configure FIREBASE_* env vars."
+    );
+    process.exit(0);
+  }
+
+  // Only import Firebase functions if Firebase is actually available
+  const { getAuth, getFirestore } = await import("../config/firebase");
   const auth = getAuth();
   const db = getFirestore();
+
+  if (!auth || !db) {
+    console.log("⚠️  Firebase Auth or Firestore not available. Exiting.");
+    process.exit(0);
+  }
 
   const results: SeedResult[] = [];
 
@@ -115,7 +125,6 @@ async function seedDemoUsers(): Promise<void> {
         status = "verified";
         console.log(`✓ ${user.username} — Auth account exists (uid: ${uid.slice(0, 8)}...)`);
       } catch (err: unknown) {
-        // User does not exist — create it
         const authCode = (err as { code?: string }).code;
         if (authCode === "auth/user-not-found") {
           const created = await auth.createUser({
@@ -188,3 +197,4 @@ seedDemoUsers().catch((err) => {
   console.error("Fatal seeding error:", err);
   process.exit(1);
 });
+

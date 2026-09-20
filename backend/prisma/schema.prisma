@@ -9,6 +9,25 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Authentication ───────────────────────────────────────────────────────────
+// Local bcrypt+JWT authentication — no external Firebase dependency required.
+// Passwords are stored as bcrypt hashes ONLY. Plaintext is never persisted.
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("Operator")
+  department   String   @default("Emergency Operations")
+  operatorId   String?
+  avatar       String   @default("")
+  permissions  String   @default("[\"INCIDENTS\",\"MAP\"]") // JSON string of string[]
+  email        String   @unique
+  createdAt    String
+  updatedAt    String
+  active       Boolean  @default(true)
+}
+
 model Zone {
   id                    String   @id
   name                  String

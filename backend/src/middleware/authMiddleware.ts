@@ -1,8 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import { getAuth } from "../config/firebase";
 import { UnauthorizedError } from "../utils/errors";
-import { COLLECTIONS } from "../db/collections";
-import { firestoreService } from "../db/firestore";
+import { verifyToken, profileService } from "../services/auth.service";
 import { logger } from "../config/logger";
 
 // Extend Express Request to include authenticated user info
@@ -21,18 +19,9 @@ declare global {
   }
 }
 
-interface UserProfile {
-  uid: string;
-  email: string;
-  username?: string;
-  role?: string;
-  permissions?: string[];
-  operatorId?: string;
-}
-
 /**
- * Verifies Firebase ID token in Authorization: Bearer <token> header.
- * Attaches decoded user info + Firestore profile to req.user.
+ * Verifies JWT Bearer token in Authorization header.
+ * Attaches decoded user info + Prisma profile to req.user.
  * Never trusts req.body.userId as identity proof.
  */
 export const authMiddleware = async (
@@ -53,27 +42,28 @@ export const authMiddleware = async (
   }
 
   try {
-    const auth = getAuth();
-    const decodedToken = await auth.verifyIdToken(token);
+    // Verify JWT signature and expiry
+    const payload = verifyToken(token);
 
-    // Fetch Firestore profile for role/username/permissions
-    const profile = await firestoreService.getDocument<UserProfile>(
-      COLLECTIONS.USERS,
-      decodedToken.uid
-    );
+    // Fetch current user profile from Prisma
+    const profile = await profileService.getProfile(payload.sub);
+
+    if (!profile) {
+      return next(new UnauthorizedError("User account not found"));
+    }
 
     req.user = {
-      uid: decodedToken.uid,
-      email: decodedToken.email ?? "",
-      username: profile?.username,
-      role: profile?.role,
-      permissions: profile?.permissions,
-      operatorId: profile?.operatorId,
+      uid: payload.sub,
+      email: profile.email,
+      username: profile.username,
+      role: profile.role,
+      permissions: profile.permissions,
+      operatorId: profile.operatorId,
     };
 
     next();
   } catch (err) {
-    logger.warn({ err }, "Firebase token verification failed");
+    logger.warn({ err }, "JWT token verification failed");
     next(new UnauthorizedError("Invalid or expired authentication token"));
   }
 };
@@ -93,22 +83,21 @@ export const optionalAuthMiddleware = async (
   if (!token) return next();
 
   try {
-    const auth = getAuth();
-    const decodedToken = await auth.verifyIdToken(token);
-    const profile = await firestoreService.getDocument<UserProfile>(
-      COLLECTIONS.USERS,
-      decodedToken.uid
-    );
-    req.user = {
-      uid: decodedToken.uid,
-      email: decodedToken.email ?? "",
-      username: profile?.username,
-      role: profile?.role,
-      permissions: profile?.permissions,
-      operatorId: profile?.operatorId,
-    };
+    const payload = verifyToken(token);
+    const profile = await profileService.getProfile(payload.sub);
+    if (profile) {
+      req.user = {
+        uid: payload.sub,
+        email: profile.email,
+        username: profile.username,
+        role: profile.role,
+        permissions: profile.permissions,
+        operatorId: profile.operatorId,
+      };
+    }
   } catch {
     // Silently ignore invalid tokens for optional auth
   }
   next();
 };
+

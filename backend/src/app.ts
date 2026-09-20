@@ -25,7 +25,7 @@ import { errorHandler } from "./middleware/errorHandler";
 export const createApp = () => {
   const app = express();
 
-  // Initialize Firebase Admin SDK
+  // Attempt Firebase initialization (optional — no crash if not configured)
   initFirebase();
 
   // CORS
