@@ -4,6 +4,7 @@ import {
   realtimeEngine,
   AlertNotificationItem,
   ActivityLogEntry,
+  ReportIncidentPayload,
 } from '../services/realtimeEngine';
 import { mockService } from '../services/mockService';
 
@@ -21,6 +22,7 @@ interface AppContextType {
   lastUpdatedTimestamp: string;
   markAlertRead: (id: string) => void;
   markAllAlertsRead: () => void;
+  reportIncident: (payload: ReportIncidentPayload) => Incident;
   summaryStats: ReturnType<typeof mockService.getSummaryStats>;
 }
 
@@ -71,6 +73,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     realtimeEngine.markAllAlertsRead();
   };
 
+  const reportIncident = (payload: ReportIncidentPayload): Incident => {
+    return realtimeEngine.reportIncident(payload);
+  };
+
   const summaryStats = mockService.getSummaryStats();
 
   return (
@@ -89,6 +95,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         lastUpdatedTimestamp,
         markAlertRead,
         markAllAlertsRead,
+        reportIncident,
         summaryStats,
       }}
     >

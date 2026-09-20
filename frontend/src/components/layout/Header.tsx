@@ -1,15 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { Clock, User, Play, Pause, Radio } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Clock, Play, Pause, Radio } from 'lucide-react';
 import { StatusBadge } from '../common/StatusBadge';
 import { ThemeToggle } from '../common/ThemeToggle';
 import { NotificationPanel } from '../common/NotificationPanel';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 
 const routeSubtitleMap: Record<string, { title: string; subtitle: string }> = {
   '/': {
     title: 'Command Center',
     subtitle: 'City-wide emergency response overview',
+  },
+  '/report': {
+    title: 'Report Emergency',
+    subtitle: 'Submit incident information for real-time response coordination',
+  },
+  '/report-emergency': {
+    title: 'Report Emergency',
+    subtitle: 'Submit public incident report for emergency response coordination',
+  },
+  '/inputs': {
+    title: 'Live Input Sources',
+    subtitle: 'Real-time telemetry, calls, CCTV and signal ingestion stream',
   },
   '/incidents': {
     title: 'Incident Intelligence',
@@ -39,11 +52,17 @@ const routeSubtitleMap: Record<string, { title: string; subtitle: string }> = {
     title: 'System Activity',
     subtitle: 'Real-time operational audit log & event timeline',
   },
+  '/profile': {
+    title: 'Officer Profile',
+    subtitle: 'Operator credentials, shift status & role-based permissions',
+  },
 };
 
 export const Header: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { isLiveSimRunning, toggleLiveSim, lastUpdatedSecondsAgo } = useApp();
+  const { currentUser } = useAuth();
   const [timeString, setTimeString] = useState<string>('');
 
   useEffect(() => {
@@ -129,16 +148,27 @@ export const Header: React.FC = () => {
         <ThemeToggle />
 
         {/* Operator Profile */}
-        <div className="hidden md:flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
-          <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600 dark:text-blue-400 font-semibold text-xs">
-            <User className="w-3.5 h-3.5" />
+        {currentUser ? (
+          <div
+            onClick={() => navigate('/profile')}
+            className="hidden md:flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800 cursor-pointer hover:opacity-80 transition-opacity"
+            title="View Officer Profile"
+          >
+            <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 flex items-center justify-center font-bold text-xs text-blue-600 dark:text-blue-400">
+              {currentUser.avatar}
+            </div>
+            <div className="text-xs font-sans hidden xl:block">
+              <span className="font-semibold text-slate-800 dark:text-slate-200 block leading-tight">
+                {currentUser.operatorId}
+              </span>
+              <span className="text-[10px] text-slate-400 block leading-tight truncate max-w-[110px]">
+                {currentUser.name}
+              </span>
+            </div>
           </div>
-          <div className="text-xs font-sans hidden xl:block">
-            <span className="font-semibold text-slate-800 dark:text-slate-200 block leading-tight">Operator #04</span>
-            <span className="text-[10px] text-slate-400 block leading-tight">EOC Shift Lead</span>
-          </div>
-        </div>
+        ) : null}
       </div>
     </header>
   );
 };
+

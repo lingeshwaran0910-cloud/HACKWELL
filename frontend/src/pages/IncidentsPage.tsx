@@ -1,31 +1,97 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useLocation, useParams } from 'react-router-dom';
 import {
   AlertTriangle,
   Search,
   Filter,
   X,
+  Radio,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { Incident, Resource, Hospital } from '@shared/types';
+import { Incident, Resource, Hospital, EvidenceSourceType } from '@shared/types';
 import { IncidentStatusBadge } from '../components/incidents/IncidentStatusBadge';
 import { IncidentSeverityBadge } from '../components/incidents/IncidentSeverityBadge';
 import { EvidenceList } from '../components/incidents/EvidenceList';
 import { StatusBadge } from '../components/common/StatusBadge';
-import { formatReportedTime } from '../utils/timeUtils';
 
-type TabType = 'overview' | 'evidence' | 'timeline' | 'response';
+type TabType = 'input_details' | 'evidence' | 'timeline' | 'response';
+
+const getSourceDisplay = (sourceType?: EvidenceSourceType) => {
+  switch (sourceType) {
+    case 'EMERGENCY_CALL':
+      return <span className="flex items-center gap-1.5"><span className="text-base">🚨</span> <span>112 Emergency Call</span></span>;
+    case 'CCTV':
+      return <span className="flex items-center gap-1.5"><span className="text-base">📹</span> <span>CCTV / Camera</span></span>;
+    case 'IOT_SENSOR':
+      return <span className="flex items-center gap-1.5"><span className="text-base">📡</span> <span>IoT Sensor</span></span>;
+    case 'TRAFFIC':
+      return <span className="flex items-center gap-1.5"><span className="text-base">🚥</span> <span>Traffic Sensor</span></span>;
+    case 'VEHICLE_TELEMETRY':
+      return <span className="flex items-center gap-1.5"><span className="text-base">🚗</span> <span>GPS Telemetry</span></span>;
+    case 'GPS':
+      return <span className="flex items-center gap-1.5"><span className="text-base">🌐</span> <span>GPS Signal</span></span>;
+    case 'SATELLITE':
+      return <span className="flex items-center gap-1.5"><span className="text-base">🛰️</span> <span>Satellite / Hazard Data</span></span>;
+    case 'CITIZEN_REPORT':
+      return <span className="flex items-center gap-1.5"><span className="text-base">👤</span> <span>Citizen Report</span></span>;
+    case 'WEATHER':
+      return <span className="flex items-center gap-1.5"><span className="text-base">☁️</span> <span>Weather Alert</span></span>;
+    case 'HOSPITAL_FEED':
+      return <span className="flex items-center gap-1.5"><span className="text-base">🏥</span> <span>Hospital Feed</span></span>;
+    case 'RESOURCE_FEED':
+      return <span className="flex items-center gap-1.5"><span className="text-base">🚑</span> <span>Resource Telemetry</span></span>;
+    case 'ROAD_EVENT':
+      return <span className="flex items-center gap-1.5"><span className="text-base">🚧</span> <span>Road Event</span></span>;
+    default:
+      return <span className="flex items-center gap-1.5"><span className="text-base">📻</span> <span>Emergency Input Source</span></span>;
+  }
+};
+
+const formatReceivedTime = (ts?: string) => {
+  if (!ts) return 'Unknown';
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return ts;
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+};
+
+const getLocationName = (inc: Incident) => {
+  const zoneNameMap: Record<string, string> = {
+    ZONE_A: 'Trichy Junction',
+    ZONE_B: 'Chatram Bus Stand',
+    ZONE_C: 'Thillai Nagar',
+    ZONE_D: 'KK Nagar',
+    ZONE_E: 'Srirangam',
+  };
+  const name = zoneNameMap[inc.zoneId] || inc.zoneId;
+  return `${name} (${inc.location.lat.toFixed(4)}, ${inc.location.lng.toFixed(4)})`;
+};
 
 export const IncidentsPage: React.FC = () => {
+  const location = useLocation();
+  const params = useParams<{ incidentId?: string }>();
   const { incidents, evidence, resources, hospitals } = useApp();
 
   const [filterSeverity, setFilterSeverity] = useState<string>('ALL');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(incidents[0]?.id || null);
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const targetIdFromNav = params.incidentId || (location.state as { selectedIncidentId?: string })?.selectedIncidentId;
 
-  const selectedIncident = incidents.find((i) => i.id === selectedIncidentId) || incidents[0];
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(
+    targetIdFromNav || incidents[0]?.id || null
+  );
+  const [activeTab, setActiveTab] = useState<TabType>('input_details');
+
+  useEffect(() => {
+    if (targetIdFromNav) {
+      setSelectedIncidentId(targetIdFromNav);
+    }
+  }, [targetIdFromNav]);
+
+  const selectedIncident = useMemo(() => {
+    if (!selectedIncidentId) return incidents[0];
+    return incidents.find((i) => i.id.toLowerCase() === selectedIncidentId.toLowerCase()) || incidents[0];
+  }, [incidents, selectedIncidentId]);
 
   // Filtered incidents
   const filteredIncidents = useMemo(() => {
@@ -112,7 +178,7 @@ export const IncidentsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Workspace Split: Incident Data Table (Left) + Tabbed Details Panel (Right) */}
+      {/* Main Workspace Split: Incident Data Table (Left) + Input Details Panel (Right) */}
       <div className="flex-1 grid grid-cols-12 gap-3 overflow-hidden min-h-0">
         {/* Incident List Table */}
         <div className="col-span-12 lg:col-span-6 bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3 flex flex-col shadow-xs overflow-hidden">
@@ -174,7 +240,7 @@ export const IncidentsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Incident Details Tabbed Workspace Panel */}
+        {/* Input Details Card (Right Panel) */}
         <div className="col-span-12 lg:col-span-6 bg-white dark:bg-[#0b1329] border border-slate-200 dark:border-slate-800/90 rounded-xl p-3 flex flex-col shadow-xs overflow-hidden">
           {selectedIncident ? (
             <div className="h-full flex flex-col overflow-hidden">
@@ -182,9 +248,10 @@ export const IncidentsPage: React.FC = () => {
               <div className="flex items-start justify-between gap-2 pb-2 mb-2 border-b border-slate-200 dark:border-slate-800 shrink-0">
                 <div>
                   <div className="flex items-center gap-1.5 mb-1">
+                    <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 font-bold text-[10px] uppercase rounded border border-blue-200 dark:border-blue-800/80 tracking-wider">
+                      Input Details
+                    </span>
                     <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">{selectedIncident.id}</span>
-                    <IncidentSeverityBadge severity={selectedIncident.severity} size="sm" />
-                    <IncidentStatusBadge status={selectedIncident.status} size="sm" />
                   </div>
                   <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">{selectedIncident.title}</h3>
                 </div>
@@ -198,63 +265,111 @@ export const IncidentsPage: React.FC = () => {
 
               {/* Tabs */}
               <div className="flex items-center gap-1 border-b border-slate-200 dark:border-slate-800 pb-2 mb-2.5 text-xs shrink-0">
-                {(['overview', 'evidence', 'timeline', 'response'] as TabType[]).map((tab) => (
+                {[
+                  { id: 'input_details', label: 'Input Details' },
+                  { id: 'evidence', label: 'Evidence Feeds' },
+                  { id: 'timeline', label: 'Timeline' },
+                  { id: 'response', label: 'Response' },
+                ].map((tab) => (
                   <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`px-3 py-1 rounded-md font-medium capitalize transition-colors cursor-pointer ${
-                      activeTab === tab
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as TabType)}
+                    className={`px-3 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+                      activeTab === tab.id
                         ? 'bg-blue-600 text-white font-semibold shadow-xs'
                         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
                     }`}
                   >
-                    {tab}
+                    {tab.label}
                   </button>
                 ))}
               </div>
 
               {/* Tab Body */}
               <div className="flex-1 overflow-y-auto pr-1 space-y-2.5">
-                {activeTab === 'overview' && (
-                  <div className="space-y-2 text-xs">
-                    <div className="p-2.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg">
-                      <span className="text-[10px] font-semibold text-slate-400 uppercase block mb-1">Description</span>
-                      <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-[11px]">{selectedIncident.description}</p>
+                {activeTab === 'input_details' && (
+                  evidenceList.length === 0 ? (
+                    <div className="p-8 text-center text-slate-400 text-xs bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-800 my-auto">
+                      <Radio className="w-8 h-8 mx-auto mb-2 text-slate-400 opacity-50" />
+                      <p className="font-bold text-slate-700 dark:text-slate-300">No input details available</p>
+                      <p className="text-[11px] text-slate-500 mt-1">No incoming evidence feeds are linked to this incident.</p>
                     </div>
+                  ) : (
+                    <div className="space-y-2.5 text-xs font-sans">
+                      {/* Operational Context Header */}
+                      <div className="p-2.5 bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 rounded-lg text-blue-900 dark:text-blue-200 text-[11px] leading-snug">
+                        <span className="font-bold block text-[10px] text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-0.5">
+                          SafeCity Ingestion Analysis
+                        </span>
+                        What information caused SafeCity to understand this incident?
+                      </div>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="p-2 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg">
-                        <span className="text-[10px] text-slate-400 uppercase font-semibold block">Coordinates</span>
-                        <span className="font-mono text-slate-800 dark:text-slate-200 font-bold">{selectedIncident.location.lat.toFixed(4)}, {selectedIncident.location.lng.toFixed(4)}</span>
-                      </div>
-                      <div className="p-2 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg">
-                        <span className="text-[10px] text-slate-400 uppercase font-semibold block">Reported</span>
-                        <span className="font-mono text-slate-800 dark:text-slate-200 font-bold">{formatReportedTime(selectedIncident.firstReportedAt, selectedIncident.priority.waitingSeconds)}</span>
-                      </div>
-                    </div>
+                      {/* Main Key-Value Metadata Grid */}
+                      <div className="grid grid-cols-2 gap-2">
+                        {/* Source */}
+                        <div className="p-2.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg space-y-1">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Source</span>
+                          <div className="font-semibold text-slate-900 dark:text-slate-100 text-xs">
+                            {getSourceDisplay(evidenceList[0]?.sourceType)}
+                          </div>
+                        </div>
 
-                    {/* Fused Facts */}
-                    <div className="p-2.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg space-y-1.5">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="font-semibold text-slate-800 dark:text-slate-200">Fused Facts</span>
-                        {selectedIncident.hasConflict ? (
-                          <span className="text-rose-600 dark:text-rose-400 font-bold text-[10px]">CONFLICT</span>
-                        ) : (
-                          <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">VERIFIED</span>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 font-mono text-[11px]">
-                        <div className="p-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded flex justify-between">
-                          <span className="text-slate-400">Victims</span>
-                          <strong className="text-slate-900 dark:text-slate-100">{String(selectedIncident.fused.victimCount)}</strong>
+                        {/* Received */}
+                        <div className="p-2.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg space-y-1">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Received</span>
+                          <div className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
+                            {formatReceivedTime(evidenceList[0]?.timestamp || selectedIncident.firstReportedAt)}
+                          </div>
                         </div>
-                        <div className="p-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded flex justify-between">
-                          <span className="text-slate-400">Injuries</span>
-                          <strong className="text-slate-900 dark:text-slate-100">{String(selectedIncident.fused.injuryCount)}</strong>
+
+                        {/* Location */}
+                        <div className="p-2.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg space-y-1">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Location</span>
+                          <div className="font-medium text-slate-900 dark:text-slate-100 text-xs truncate" title={getLocationName(selectedIncident)}>
+                            {getLocationName(selectedIncident)}
+                          </div>
+                        </div>
+
+                        {/* Severity & Status */}
+                        <div className="p-2.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg space-y-1">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Severity & Status</span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <IncidentSeverityBadge severity={selectedIncident.severity} size="sm" />
+                            <IncidentStatusBadge status={selectedIncident.status} size="sm" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Narrative Report */}
+                      <div className="p-2.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg space-y-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Report</span>
+                        <p className="text-slate-700 dark:text-slate-300 text-[11px] leading-relaxed italic bg-white dark:bg-slate-950/70 p-2 rounded border border-slate-200 dark:border-slate-800">
+                          "{evidenceList[0]?.normalized?.narrative || selectedIncident.description}"
+                        </p>
+                      </div>
+
+                      {/* Contributing Evidence Sources */}
+                      <div className="p-2.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg space-y-2">
+                        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-1">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Evidence</span>
+                          <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 font-semibold">{evidenceList.length} feed(s)</span>
+                        </div>
+                        <div className="space-y-1.5 bg-white dark:bg-slate-950/70 p-2 rounded border border-slate-200 dark:border-slate-800 text-xs">
+                          {evidenceList.map((ev, idx) => (
+                            <div key={ev.id || idx} className="flex items-center gap-2 text-slate-800 dark:text-slate-200 font-medium">
+                              <span className="text-blue-500 font-bold">•</span>
+                              <div className="flex-1 flex items-center justify-between">
+                                <span>{getSourceDisplay(ev.sourceType)}</span>
+                                <span className="font-mono text-[10px] text-slate-400">
+                                  {Math.round((ev.confidence || 0.9) * 100)}% confidence
+                                </span>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     </div>
-                  </div>
+                  )
                 )}
 
                 {activeTab === 'evidence' && (
@@ -306,8 +421,10 @@ export const IncidentsPage: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center text-center text-slate-400 text-xs">
-              Select an incident to view details.
+            <div className="h-full flex flex-col items-center justify-center text-center text-slate-400 text-xs font-sans">
+              <Radio className="w-8 h-8 text-slate-500 mb-2 opacity-60" />
+              <p className="font-semibold text-slate-300">No input details available</p>
+              <p className="text-[11px] text-slate-500 mt-1">Select an incident to view details.</p>
             </div>
           )}
         </div>
@@ -315,3 +432,4 @@ export const IncidentsPage: React.FC = () => {
     </div>
   );
 };
+

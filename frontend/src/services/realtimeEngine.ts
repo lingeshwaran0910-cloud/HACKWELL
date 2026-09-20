@@ -748,9 +748,161 @@ class RealtimeSimulationEngine {
     };
   }
 
+  /** Create and submit a new emergency incident report */
+  public reportIncident(payload: ReportIncidentPayload): Incident {
+    const nowIso = new Date().toISOString();
+    const incNumber = (this.cityWorld.incidents || []).length + 10;
+    const incId = `inc-${String(incNumber).padStart(3, '0')}`;
+
+    const typeMapping: Record<string, any> = {
+      'Medical Emergency': 'HAZMAT',
+      'Road Accident': 'ROAD_ACCIDENT',
+      'Fire': 'FIRE',
+      'Crime': 'INFRASTRUCTURE_FAILURE',
+      'Public Safety': 'FLOOD',
+      'Other': 'ANOMALY',
+    };
+
+    const incidentType = typeMapping[payload.type] || (payload.type.toUpperCase().replace(/\s+/g, '_') as any);
+    const title = `${payload.type} - ${payload.address || 'Reported Location'}`;
+
+    const newIncident: Incident = {
+      id: incId,
+      type: incidentType,
+      status: 'SUSPECTED',
+      title,
+      description: payload.description,
+      location: {
+        lat: payload.lat,
+        lng: payload.lng,
+        accuracyMeters: 10,
+      },
+      locationUncertaintyMeters: 10,
+      zoneId: 'zone-forest',
+      observability: 'HIGH',
+      evidenceIds: [],
+      fused: {
+        victimCount: payload.severity >= 4 ? 2 : 0,
+        injuryCount: payload.severity >= 3 ? 1 : 0,
+        roadBlocked: payload.severity >= 4,
+        firePresent: payload.type === 'Fire',
+        notes: [payload.description],
+      },
+      conflicts: [],
+      hasConflict: false,
+      severity: (Math.min(5, Math.max(1, Math.round(payload.severity))) as 1 | 2 | 3 | 4 | 5),
+      priority: {
+        score: Math.min(98, payload.severity * 18 + 12),
+        urgency: payload.severity,
+        waitingSeconds: 0,
+        observabilityPenalty: 0,
+        reasons: [`Reported via ${payload.sourceType || 'Citizen 112 Feed'}`],
+      },
+      responseDebt: {
+        value: payload.severity * 15.0,
+        urgency: payload.severity,
+        waitingSeconds: 0,
+        affectedPeopleFactor: 1.2,
+        formula: `${payload.severity} * 15`,
+        reasons: [`Severity ${payload.severity} direct emergency report`],
+      },
+      secondaryRisks: [],
+      rippleEffects: [],
+      assignedResourceIds: [],
+      recommendedHospitalId: 'hosp-001',
+      activeRouteIds: [],
+      shortageFlags: [],
+      verificationRequired: false,
+      silentAnomaly: false,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      firstReportedAt: nowIso,
+      resolvedAt: null,
+    };
+
+    // Process attached evidence metadata
+    if (payload.evidenceFiles && payload.evidenceFiles.length > 0) {
+      payload.evidenceFiles.forEach((f, idx) => {
+        const evId = `ev-${incId}-${idx + 1}`;
+        const newEv: Evidence = {
+          id: evId,
+          sourceType: (payload.sourceType as any) || 'CITIZEN_REPORT',
+          timestamp: nowIso,
+          ingestedAt: nowIso,
+          location: { lat: payload.lat, lng: payload.lng, accuracyMeters: 10 },
+          incidentId: incId,
+          raw: { fileName: f.name, fileSize: f.size, fileType: f.type },
+          normalized: {
+            incidentTypeHint: incidentType,
+            narrative: payload.description,
+            victimCount: payload.severity >= 4 ? 2 : 0,
+            injuryCount: payload.severity >= 3 ? 1 : 0,
+            speedKmh: 0,
+            speedSeriesKmh: null,
+            impactSignal: true,
+            airbagDeployed: false,
+            rollover: false,
+            gpsStopped: false,
+            hazardClass: null,
+            roadBlocked: false,
+            congestionIndex: 0.5,
+            bbox: null,
+            cannotDeterminePeople: false,
+          },
+          confidence: payload.confidence || 0.9,
+          freshnessSeconds: 0,
+          stale: false,
+          metadata: { fileName: f.name },
+        };
+        this.cityWorld.evidence.unshift(newEv);
+        newIncident.evidenceIds.push(evId);
+      });
+    }
+
+    this.cityWorld.incidents.unshift(newIncident);
+
+    this.addAlert({
+      id: `alert-${Date.now()}`,
+      title: 'New Emergency Report Submitted',
+      desc: `${newIncident.title} (Severity ${newIncident.severity}) submitted to live response network.`,
+      time: 'Just now',
+      timestamp: nowIso,
+      unread: true,
+      type: newIncident.severity >= 4 ? 'critical' : 'warning',
+      relatedEntityId: incId,
+      relatedEntityType: 'incident',
+    });
+
+    this.addActivity({
+      id: `act-${Date.now()}`,
+      timestamp: nowIso,
+      severity: newIncident.severity >= 4 ? 'CRITICAL' : 'WARNING',
+      category: 'INCIDENT',
+      title: `Emergency Report: ${newIncident.title}`,
+      details: `Severity ${newIncident.severity} • Coordinates ${payload.lat.toFixed(4)}, ${payload.lng.toFixed(4)}`,
+      relatedEntityId: incId,
+      relatedEntityType: 'incident',
+    });
+
+    this.notifyListeners();
+    return newIncident;
+  }
+
   private notifyListeners() {
     this.listeners.forEach((listener) => listener());
   }
+}
+
+export interface ReportIncidentPayload {
+  type: string;
+  severity: number;
+  description: string;
+  address?: string;
+  lat: number;
+  lng: number;
+  sourceType?: string;
+  confidence?: number;
+  evidenceFiles?: { name: string; size: number; type: string }[];
 }
 
 export const realtimeEngine = new RealtimeSimulationEngine();

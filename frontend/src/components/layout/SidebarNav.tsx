@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   Shield,
   LayoutDashboard,
+  PlusCircle,
+  Radio,
   AlertTriangle,
   Map,
   Ambulance,
@@ -12,8 +14,10 @@ import {
   History,
   ChevronLeft,
   ChevronRight,
-  CheckCircle2,
+  User,
+  LogOut,
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 interface NavItem {
   path: string;
@@ -22,13 +26,30 @@ interface NavItem {
 }
 
 export const SidebarNav: React.FC = () => {
+  const navigate = useNavigate();
+  const { currentUser, logout } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const handleSignOut = () => {
+    logout();
+    navigate('/login');
+  };
 
   const navItems: NavItem[] = [
     {
       path: '/',
       label: 'Command Center',
       icon: <LayoutDashboard className="w-4 h-4 shrink-0" />,
+    },
+    {
+      path: '/report',
+      label: 'Report Emergency',
+      icon: <PlusCircle className="w-4 h-4 shrink-0 text-rose-500" />,
+    },
+    {
+      path: '/inputs',
+      label: 'Live Inputs',
+      icon: <Radio className="w-4 h-4 shrink-0" />,
     },
     {
       path: '/incidents',
@@ -64,6 +85,11 @@ export const SidebarNav: React.FC = () => {
       path: '/activity',
       label: 'Activity',
       icon: <History className="w-4 h-4 shrink-0" />,
+    },
+    {
+      path: '/profile',
+      label: 'Profile',
+      icon: <User className="w-4 h-4 shrink-0 text-blue-500" />,
     },
   ];
 
@@ -140,24 +166,34 @@ export const SidebarNav: React.FC = () => {
         </nav>
       </div>
 
-      {/* Bottom Status Footer */}
-      <div className={`p-3 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 shrink-0 ${isCollapsed ? 'text-center' : ''}`}>
+      {/* Bottom Status Footer & Sign Out */}
+      <div className="p-3 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 shrink-0 space-y-2">
+        {currentUser && (
+          <button
+            onClick={handleSignOut}
+            title={isCollapsed ? 'Sign Out' : undefined}
+            className={`w-full py-1.5 px-2 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/80 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/80 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center ${
+              isCollapsed ? 'justify-center' : 'justify-between'
+            }`}
+          >
+            {!isCollapsed && <span>Sign Out</span>}
+            <LogOut className="w-3.5 h-3.5 shrink-0" />
+          </button>
+        )}
+
         {!isCollapsed ? (
-          <div className="space-y-1 font-sans text-xs">
+          <div className="space-y-0.5 font-sans text-xs pt-1 border-t border-slate-200 dark:border-slate-800/60">
             <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium text-[11px]">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>Systems Operational</span>
             </div>
             <div className="text-[10px] text-slate-400 dark:text-slate-400 font-mono">
-              Last sync: {new Date().toLocaleTimeString()}
+              Officer: {currentUser?.operatorId || 'EOC-004'}
             </div>
           </div>
-        ) : (
-          <div className="flex justify-center" title="Systems Operational">
-            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-          </div>
-        )}
+        ) : null}
       </div>
     </aside>
   );
 };
+

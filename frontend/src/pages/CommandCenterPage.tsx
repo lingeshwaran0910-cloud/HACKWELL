@@ -183,7 +183,7 @@ export const CommandCenterPage: React.FC = () => {
               selectedIncidentId={selectedIncidentId}
               onSelectIncident={(inc) => {
                 setSelectedIncidentId(inc.id);
-                navigate('/incidents');
+                navigate(`/incidents/${inc.id}`, { state: { selectedIncidentId: inc.id } });
               }}
             />
           </div>
@@ -208,7 +208,7 @@ export const CommandCenterPage: React.FC = () => {
               {urgentIncidents.map((inc: Incident) => (
                 <div
                   key={inc.id}
-                  onClick={() => navigate('/incidents')}
+                  onClick={() => navigate(`/incidents/${inc.id}`, { state: { selectedIncidentId: inc.id } })}
                   className="p-2.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/60 dark:hover:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-lg card-interactive flex items-start justify-between gap-2"
                 >
                   <div className="space-y-1">
