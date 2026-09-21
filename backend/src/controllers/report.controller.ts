@@ -23,7 +23,7 @@ export const reportController = {
         return;
       }
 
-      const report = await reportService.createReport(
+      const result = await reportService.createReport(
         parsed.data,
         req.user?.uid,
         req.user?.username
@@ -31,7 +31,8 @@ export const reportController = {
 
       res.status(201).json({
         success: true,
-        report,
+        report: result.report,
+        incident: result.incident,
         message: "Emergency report submitted successfully",
       });
     } catch (err) {

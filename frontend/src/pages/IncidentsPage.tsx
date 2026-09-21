@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useParams, useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle,
   Search,
@@ -69,13 +69,15 @@ const getLocationName = (inc: Incident) => {
 export const IncidentsPage: React.FC = () => {
   const location = useLocation();
   const params = useParams<{ incidentId?: string }>();
+  const [searchParams] = useSearchParams();
+  const queryIncidentId = searchParams.get('selectedIncidentId');
   const { incidents, evidence, resources, hospitals } = useApp();
 
   const [filterSeverity, setFilterSeverity] = useState<string>('ALL');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  const targetIdFromNav = params.incidentId || (location.state as { selectedIncidentId?: string })?.selectedIncidentId;
+  const targetIdFromNav = params.incidentId || queryIncidentId || (location.state as { selectedIncidentId?: string })?.selectedIncidentId;
 
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(
     targetIdFromNav || incidents[0]?.id || null
@@ -200,6 +202,7 @@ export const IncidentsPage: React.FC = () => {
             ) : (
               filteredIncidents.map((inc: Incident) => {
                 const isSelected = selectedIncident && inc.id === selectedIncident.id;
+                const isNew = inc.status === 'NEW' || inc.status === 'SUSPECTED' || (selectedIncidentId && inc.id.toLowerCase() === selectedIncidentId.toLowerCase());
                 const waitingMin = Math.round(inc.priority.waitingSeconds / 60);
 
               return (
@@ -214,8 +217,13 @@ export const IncidentsPage: React.FC = () => {
                 >
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <div className="space-y-0.5">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">{inc.id}</span>
+                        {isNew && (
+                          <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 font-mono text-[9px] font-bold rounded border border-emerald-500/30 uppercase tracking-wider">
+                            NEW INCIDENT
+                          </span>
+                        )}
                         <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{inc.zoneId}</span>
                       </div>
                       <h4 className="font-semibold text-xs text-slate-900 dark:text-slate-100 leading-snug line-clamp-1">{inc.title}</h4>

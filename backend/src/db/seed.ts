@@ -99,7 +99,7 @@ async function seedDemoUsers(): Promise<void> {
   }
 
   // Only import Firebase functions if Firebase is actually available
-  const { getAuth, getFirestore } = await import("../config/firebase");
+  const { getAuth, getFirestore } = await import("../config/firebase.js");
   const auth = getAuth();
   const db = getFirestore();
 

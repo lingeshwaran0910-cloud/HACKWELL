@@ -11,6 +11,6 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*", "../shared/**/*"],
+  "include": ["src/**/*", "prisma/**/*", "../shared/**/*"],
   "exclude": ["node_modules", "dist"]
 }

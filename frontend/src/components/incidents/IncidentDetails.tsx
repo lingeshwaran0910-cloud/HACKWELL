@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   AlertTriangle,
@@ -7,12 +7,17 @@ import {
   Building2,
   FileText,
   TrendingUp,
+  BrainCircuit,
+  Sparkles,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { Incident, Resource, Hospital } from '@shared/types';
 import { IncidentStatusBadge } from './IncidentStatusBadge';
 import { IncidentSeverityBadge } from './IncidentSeverityBadge';
 import { EvidenceList } from './EvidenceList';
 import { mockService } from '../../services/mockService';
+import { intelligenceApi, StructuredIntelligenceData, AIHealthStatus } from '../../services/apiService';
 
 interface IncidentDetailsProps {
   incident: Incident;
@@ -27,6 +32,56 @@ export const IncidentDetails: React.FC<IncidentDetailsProps> = ({
 }) => {
   const evidenceList = mockService.getEvidenceForIncident(incident.id);
   const waitingMinutes = Math.round((incident.priority?.waitingSeconds || 0) / 60);
+
+  // AI State Management
+  const [aiState, setAiState] = useState<'IDLE' | 'LOADING' | 'SUCCESS' | 'ERROR'>('IDLE');
+  const [aiData, setAiData] = useState<StructuredIntelligenceData | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [healthStatus, setHealthStatus] = useState<AIHealthStatus | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    intelligenceApi
+      .getHealth()
+      .then((health) => {
+        if (isMounted) setHealthStatus(health);
+      })
+      .catch(() => {
+        if (isMounted) {
+          setHealthStatus({
+            status: 'AI OFFLINE',
+            health: {
+              configured: false,
+              online: false,
+              provider: 'gemini',
+              model: 'gemini-2.5-flash',
+              message: 'AI CONFIGURATION MISSING',
+            },
+          });
+        }
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleAnalyzeWithAI = async () => {
+    setAiState('LOADING');
+    setAiError(null);
+    try {
+      const res = await intelligenceApi.analyze(incident.id);
+      if (res.success && res.data) {
+        setAiData(res.data);
+        setAiState('SUCCESS');
+      } else {
+        setAiError('Failed to generate intelligence from backend');
+        setAiState('ERROR');
+      }
+    } catch (err: any) {
+      setAiError(err.message || 'AI analysis request failed');
+      setAiState('ERROR');
+    }
+  };
 
   // Get assigned resource objects
   const assignedResources = (incident.assignedResourceIds || [])
@@ -73,6 +128,150 @@ export const IncidentDetails: React.FC<IncidentDetailsProps> = ({
           <span className="px-2 py-0.5 bg-slate-900 text-purple-300 border border-slate-800 rounded text-[10px] font-semibold">
             OBS: {incident.observability}
           </span>
+        </div>
+
+        {/* Real AI Operational Intelligence Section */}
+        <div className="bg-slate-900/95 border border-amber-500/30 rounded-lg p-3 space-y-2.5 shadow-md">
+          {/* AI Header & Provider Status */}
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+            <div className="flex items-center gap-1.5 font-bold text-slate-100 text-xs">
+              <BrainCircuit className="w-4 h-4 text-amber-400" />
+              <span>SafeCity AI Intelligence</span>
+            </div>
+
+            {healthStatus?.health?.online ? (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-2 py-0.5 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                SAFE CITY AI ● ONLINE
+              </span>
+            ) : healthStatus?.health?.configured ? (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-rose-400 bg-rose-950/60 border border-rose-800/80 px-2 py-0.5 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+                SAFE CITY AI ● OFFLINE
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-400 bg-amber-950/60 border border-amber-800/80 px-2 py-0.5 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                AI CONFIGURATION REQUIRED
+              </span>
+            )}
+          </div>
+
+          {/* Action Button */}
+          <div className="flex items-center justify-between gap-2">
+            <button
+              onClick={handleAnalyzeWithAI}
+              disabled={aiState === 'LOADING'}
+              className={`w-full py-1.5 px-3 rounded-md font-bold text-xs flex items-center justify-center gap-2 transition-all ${
+                aiState === 'LOADING'
+                  ? 'bg-amber-600/50 text-amber-200 cursor-not-allowed'
+                  : 'bg-amber-600 hover:bg-amber-500 text-white shadow-xs'
+              }`}
+            >
+              {aiState === 'LOADING' ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>AI ANALYZING {incident.id}...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                  <span>ANALYZE WITH AI</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Error / Configuration Alert */}
+          {aiState === 'ERROR' && aiError && (
+            <div className="p-2 bg-rose-950/50 border border-rose-800/80 rounded text-[11px] text-rose-300 flex items-start gap-1.5">
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold block">Analysis Error</span>
+                <span>{aiError}</span>
+              </div>
+            </div>
+          )}
+
+          {/* AI Intelligence Output */}
+          {aiState === 'SUCCESS' && aiData && (
+            <div className="space-y-2.5 text-[11px] pt-1">
+              <div className="text-[10px] text-emerald-400 font-mono flex items-center justify-between border-b border-slate-800/80 pb-1">
+                <span>AI ANALYSIS COMPLETE</span>
+                <span>{new Date(aiData.analysisTimestamp).toLocaleTimeString()}</span>
+              </div>
+
+              {/* Metrics Strip */}
+              <div className="grid grid-cols-3 gap-1.5 text-center font-mono">
+                <div className="bg-slate-950 p-1.5 rounded border border-slate-800">
+                  <span className="text-[9px] text-slate-400 block font-sans">SEVERITY</span>
+                  <span className="font-bold text-amber-400 text-xs">{aiData.severity}</span>
+                </div>
+                <div className="bg-slate-950 p-1.5 rounded border border-slate-800">
+                  <span className="text-[9px] text-slate-400 block font-sans">PRIORITY</span>
+                  <span className="font-bold text-blue-400 text-xs">{aiData.priorityScore}/100</span>
+                </div>
+                <div className="bg-slate-950 p-1.5 rounded border border-slate-800">
+                  <span className="text-[9px] text-slate-400 block font-sans">CONFIDENCE</span>
+                  <span className="font-bold text-emerald-400 text-xs">{aiData.confidence}%</span>
+                </div>
+              </div>
+
+              {/* Situation Summary */}
+              <div className="bg-slate-950 p-2 rounded border border-slate-800 space-y-1">
+                <span className="font-bold text-slate-300 text-[10px] uppercase block">Situation Summary</span>
+                <p className="text-slate-200 leading-snug font-sans">{aiData.situationSummary}</p>
+              </div>
+
+              {/* Key Findings */}
+              {aiData.keyFindings && aiData.keyFindings.length > 0 && (
+                <div className="bg-slate-950 p-2 rounded border border-slate-800 space-y-1">
+                  <span className="font-bold text-slate-300 text-[10px] uppercase block">Key Findings</span>
+                  <ul className="list-disc list-inside space-y-0.5 text-slate-300 font-sans">
+                    {aiData.keyFindings.map((finding, idx) => (
+                      <li key={idx}>{finding}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* What Changed */}
+              {aiData.whatChanged && aiData.whatChanged.length > 0 && (
+                <div className="bg-slate-950 p-2 rounded border border-slate-800 space-y-1">
+                  <span className="font-bold text-slate-300 text-[10px] uppercase block">What Changed</span>
+                  <ul className="list-disc list-inside space-y-0.5 text-slate-300 font-sans">
+                    {aiData.whatChanged.map((change, idx) => (
+                      <li key={idx}>{change}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Next Steps */}
+              {aiData.recommendedNextSteps && aiData.recommendedNextSteps.length > 0 && (
+                <div className="bg-slate-950 p-2 rounded border border-slate-800 space-y-1">
+                  <span className="font-bold text-amber-400 text-[10px] uppercase block">Recommended Next Steps</span>
+                  <ol className="list-decimal list-inside space-y-0.5 text-slate-200 font-sans font-semibold">
+                    {aiData.recommendedNextSteps.map((step, idx) => (
+                      <li key={idx}>{step}</li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              {/* Missing Information */}
+              {aiData.missingInformation && aiData.missingInformation.length > 0 && (
+                <div className="bg-slate-950 p-2 rounded border border-slate-800 space-y-1">
+                  <span className="font-bold text-rose-400 text-[10px] uppercase block">Missing Information</span>
+                  <ul className="list-disc list-inside space-y-0.5 text-slate-400 font-sans">
+                    {aiData.missingInformation.map((missing, idx) => (
+                      <li key={idx}>{missing}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Narrative Description */}

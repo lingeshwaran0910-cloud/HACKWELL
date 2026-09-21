@@ -154,6 +154,17 @@ export const getFirestore = () => {
   return firestoreDb;
 };
 
+export const getFirestoreDb = () => {
+  const db = getFirestore();
+  if (!db) {
+    throw new FirebaseConfigurationError(
+      "Emergency report could not be saved because Firestore is unavailable. " +
+      "Configure Firebase credentials (FIREBASE_SERVICE_ACCOUNT_PATH or FIREBASE_CLIENT_EMAIL & FIREBASE_PRIVATE_KEY) or FIRESTORE_EMULATOR_HOST."
+    );
+  }
+  return db;
+};
+
 export const getAuth = () => {
   if (!firebaseApp) initFirebase();
   if (!firebaseApp) return null;

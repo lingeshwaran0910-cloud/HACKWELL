@@ -13,9 +13,46 @@ describe('Realtime Socket.IO Integration Suite', () => {
   beforeAll((done) => {
     httpServer = http.createServer(app);
     initSocketServer(httpServer);
-    httpServer.listen(0, () => {
+    httpServer.listen(0, async () => {
       const addr = httpServer.address();
       port = typeof addr === 'object' && addr ? addr.port : 4001;
+      await prisma.resource.upsert({
+        where: { id: 'res-a12' },
+        create: {
+          id: 'res-a12',
+          callSign: 'AMB-12',
+          type: 'AMBULANCE',
+          capabilities: '[]',
+          homeZoneId: 'zone-central',
+          location: '{"lat":10.79,"lng":78.70}',
+          status: 'AVAILABLE',
+          freshnessSeconds: 0,
+          stale: false,
+          isReserve: false,
+          lastUpdateAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        update: {},
+      });
+      await prisma.hospital.upsert({
+        where: { id: 'hosp-001' },
+        create: {
+          id: 'hosp-001',
+          name: 'City Central Hospital',
+          location: '{"lat":10.79,"lng":78.70}',
+          zoneId: 'zone-central',
+          capabilities: '[]',
+          bedsTotal: 100,
+          bedsAvailable: '80',
+          currentLoad: '20',
+          incomingLoad: 0,
+          stale: false,
+          predictedPressure: '{"level":"LOW"}',
+          lastUpdateAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        update: {},
+      });
       clientSocket = Client(`http://localhost:${port}`, {
         transports: ['websocket'],
       });

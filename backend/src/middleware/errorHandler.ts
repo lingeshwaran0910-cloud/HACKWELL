@@ -33,9 +33,12 @@ export const errorHandler = (
     code = "INVALID_JSON";
     message = "Malformed JSON in request body";
   } else if (err instanceof Error) {
-    // Check for Firebase auth errors
     const fbErr = err as Error & { code?: string };
-    if (fbErr.code?.startsWith("auth/")) {
+    if (err.name === "FirebaseConfigurationError" || err.message?.includes("Firestore is unavailable")) {
+      statusCode = 503;
+      code = "FIRESTORE_UNAVAILABLE";
+      message = err.message;
+    } else if (fbErr.code?.startsWith("auth/")) {
       statusCode = 401;
       code = "AUTHENTICATION_ERROR";
       // Never expose internal Firebase error details to clients

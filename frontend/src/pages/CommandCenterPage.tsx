@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle,
   Ambulance,
@@ -20,15 +20,22 @@ import { Incident } from '@shared/types';
 
 export const CommandCenterPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const queryIncidentId = searchParams.get('selectedIncidentId');
   const { incidents, hospitals, summaryStats } = useApp();
 
-  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(queryIncidentId);
 
-  // Top 3 urgent active incidents
+  useEffect(() => {
+    if (queryIncidentId) {
+      setSelectedIncidentId(queryIncidentId);
+    }
+  }, [queryIncidentId]);
+
+  // Urgent active incidents, ensuring queryIncidentId is included if present
   const urgentIncidents = [...incidents]
     .filter((i) => i.status !== 'RESOLVED')
-    .sort((a, b) => b.priority.score - a.priority.score)
-    .slice(0, 3);
+    .sort((a, b) => b.priority.score - a.priority.score);
 
   const highPressureHospitalsCount = hospitals.filter(
     (h) => h.predictedPressure.level === 'HIGH' || h.predictedPressure.level === 'MODERATE'
@@ -205,27 +212,44 @@ export const CommandCenterPage: React.FC = () => {
             />
 
             <div className="space-y-2 overflow-y-auto pr-1 mt-1">
-              {urgentIncidents.map((inc: Incident) => (
-                <div
-                  key={inc.id}
-                  onClick={() => navigate(`/incidents/${inc.id}`, { state: { selectedIncidentId: inc.id } })}
-                  className="p-2.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/60 dark:hover:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-lg card-interactive flex items-start justify-between gap-2"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">{inc.id}</span>
-                      <IncidentSeverityBadge severity={inc.severity} size="sm" />
-                      <IncidentStatusBadge status={inc.status} size="sm" />
+              {urgentIncidents.slice(0, 5).map((inc: Incident) => {
+                const isSelected = selectedIncidentId && inc.id.toLowerCase() === selectedIncidentId.toLowerCase();
+                const isNew = inc.status === 'NEW' || isSelected;
+
+                return (
+                  <div
+                    key={inc.id}
+                    onClick={() => {
+                      setSelectedIncidentId(inc.id);
+                      navigate(`/incidents/${inc.id}`, { state: { selectedIncidentId: inc.id } });
+                    }}
+                    className={`p-2.5 rounded-lg border card-interactive flex items-start justify-between gap-2 transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-blue-50/90 dark:bg-slate-800/90 border-blue-500 ring-1 ring-blue-500/40 shadow-xs'
+                        : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/60 dark:hover:bg-slate-800/60 border-slate-200 dark:border-slate-800'
+                    }`}
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">{inc.id}</span>
+                        {isNew && (
+                          <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 font-mono text-[9px] font-bold rounded border border-emerald-500/30 uppercase tracking-wider">
+                            NEW INCIDENT
+                          </span>
+                        )}
+                        <IncidentSeverityBadge severity={inc.severity} size="sm" />
+                        <IncidentStatusBadge status={inc.status} size="sm" />
+                      </div>
+                      <h4 className="font-semibold text-xs text-slate-900 dark:text-slate-100 leading-snug line-clamp-1">{inc.title}</h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">{inc.description.split('.')[0]}</p>
                     </div>
-                    <h4 className="font-semibold text-xs text-slate-900 dark:text-slate-100 leading-snug line-clamp-1">{inc.title}</h4>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">{inc.description.split('.')[0]}</p>
+                    <div className="text-right shrink-0">
+                      <span className="text-amber-600 dark:text-amber-400 font-mono text-xs font-bold">{inc.priority.score}</span>
+                      <span className="block text-[10px] text-slate-400">Score</span>
+                    </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <span className="text-amber-600 dark:text-amber-400 font-mono text-xs font-bold">{inc.priority.score}</span>
-                    <span className="block text-[10px] text-slate-400">Score</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

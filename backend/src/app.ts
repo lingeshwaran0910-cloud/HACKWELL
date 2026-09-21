@@ -18,6 +18,7 @@ import hospitalRoutes from "./routes/hospital.routes";
 import routeRoutes from "./routes/route.routes";
 import recommendationRoutes from "./routes/recommendation.routes";
 import eventRoutes from "./routes/event.routes";
+import intelligenceRoutes from "./routes/intelligence.routes";
 
 import { notFoundHandler } from "./middleware/notFound";
 import { errorHandler } from "./middleware/errorHandler";
@@ -72,6 +73,10 @@ export const createApp = () => {
   app.use("/api/v1/routes", routeRoutes);
   app.use("/api/v1/recommendations", recommendationRoutes);
   app.use("/api/v1/events", eventRoutes);
+
+  // SafeCity Real AI Intelligence Endpoints
+  app.use("/api/intelligence", intelligenceRoutes);
+  app.use("/api/v1/intelligence", intelligenceRoutes);
 
   // 404 handler
   app.use(notFoundHandler);

@@ -1,4 +1,4 @@
-import { getFirestore } from "../config/firebase";
+import { getFirestoreDb } from "../config/firebase";
 import type { WhereFilterOp } from "firebase-admin/firestore";
 
 export interface QueryFilter {
@@ -9,9 +9,7 @@ export interface QueryFilter {
 
 export class FirestoreService {
   get db() {
-    const db = getFirestore();
-    if (!db) throw new Error("Firestore is not initialized. Configure Firebase credentials to use Firestore features.");
-    return db;
+    return getFirestoreDb();
   }
 
   collection(name: string) {

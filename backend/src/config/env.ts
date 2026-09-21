@@ -23,6 +23,11 @@ const envSchema = z.object({
   // Firebase — optional, only needed if using Firestore features
   FIREBASE_PROJECT_ID: z.string().optional().default("safecity-ai-dev"),
   FIRESTORE_EMULATOR_HOST: z.string().optional(),
+  // AI Configuration
+  AI_PROVIDER: z.string().optional().default("gemini"),
+  GEMINI_API_KEY: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
+  AI_MODEL: z.string().optional().default("gemini-2.5-flash"),
 });
 
 const parseEnv = () => {

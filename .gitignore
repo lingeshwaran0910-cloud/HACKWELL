@@ -8,6 +8,7 @@ dist/
 build/
 frontend/dist/
 .vercel
+*.jar
 
 # logs
 npm-debug.log*

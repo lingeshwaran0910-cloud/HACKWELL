@@ -148,7 +148,18 @@ export interface ReportDocument extends ReportPayload {
 export const reportsApi = {
   async create(
     payload: ReportPayload
-  ): Promise<{ report: ReportDocument; message: string }> {
+  ): Promise<{
+    report: ReportDocument;
+    incident?: {
+      id: string;
+      title: string;
+      status: string;
+      priority: { score: number };
+      severity: number;
+      location: { lat: number; lng: number };
+    };
+    message: string;
+  }> {
     return apiFetch("/reports", {
       method: "POST",
       body: JSON.stringify(payload),
@@ -191,3 +202,50 @@ export const liveInputsApi = {
     return apiFetch(`/inputs?limit=${limit}`);
   },
 };
+
+// ─── AI Intelligence ──────────────────────────────────────────────────────────
+export interface AIHealthStatus {
+  status: string;
+  health: {
+    configured: boolean;
+    online: boolean;
+    provider: string;
+    model: string;
+    message: string;
+    error?: string;
+  };
+}
+
+export interface StructuredIntelligenceData {
+  incidentId: string;
+  classification: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  priorityScore: number;
+  confidence: number;
+  situationSummary: string;
+  keyFindings: string[];
+  riskFactors: string[];
+  whatChanged: string[];
+  recommendedNextSteps: string[];
+  resourceInsight: string;
+  hospitalInsight: string;
+  routeInsight: string;
+  missingInformation: string[];
+  supportingEntities: string[];
+  analysisTimestamp: string;
+}
+
+export const intelligenceApi = {
+  async getHealth(): Promise<AIHealthStatus> {
+    return apiFetch("/intelligence/health", { auth: false });
+  },
+
+  async analyze(incidentId: string): Promise<{ success: boolean; data: StructuredIntelligenceData }> {
+    return apiFetch("/intelligence/analyze", {
+      method: "POST",
+      body: JSON.stringify({ incidentId }),
+      auth: false,
+    });
+  },
+};
+

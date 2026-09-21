@@ -4,6 +4,7 @@ import {
   Evidence,
 } from '@shared/types';
 import cityDataRaw from '@mock-data/hackwell-city.json';
+import { socketClient } from './socketClient';
 
 export interface AlertNotificationItem {
   id: string;
@@ -46,6 +47,83 @@ class RealtimeSimulationEngine {
   constructor() {
     this.initializeBaselineEvents();
     this.startEngine();
+    this.setupSocketListeners();
+    this.syncFromBackend();
+  }
+
+  private setupSocketListeners() {
+    socketClient.init();
+    socketClient.on('incident.created', (eventPayload: any) => {
+      const incident: Incident = eventPayload?.data || eventPayload;
+      if (!incident || !incident.id) return;
+
+      const existingIdx = (this.cityWorld.incidents || []).findIndex((i) => i.id === incident.id);
+      if (existingIdx >= 0) {
+        this.cityWorld.incidents[existingIdx] = incident;
+      } else {
+        this.cityWorld.incidents.unshift(incident);
+      }
+
+      const nowIso = new Date().toISOString();
+      this.addAlert({
+        id: `alert-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        title: 'New Emergency Incident Ingested',
+        desc: `${incident.title} (Severity ${incident.severity}) received via live backend network.`,
+        time: 'Just now',
+        timestamp: nowIso,
+        unread: true,
+        type: incident.severity >= 4 ? 'critical' : 'warning',
+        relatedEntityId: incident.id,
+        relatedEntityType: 'incident',
+      });
+
+      this.addActivity({
+        id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        timestamp: nowIso,
+        severity: incident.severity >= 4 ? 'CRITICAL' : 'WARNING',
+        category: 'INCIDENT',
+        title: `Live Network Event: ${incident.title}`,
+        details: `Status ${incident.status} • Severity ${incident.severity}`,
+        relatedEntityId: incident.id,
+        relatedEntityType: 'incident',
+      });
+
+      this.notifyListeners();
+    });
+
+    socketClient.on('incident.updated', (eventPayload: any) => {
+      const incident: Incident = eventPayload?.data || eventPayload;
+      if (!incident || !incident.id) return;
+      const idx = (this.cityWorld.incidents || []).findIndex((i) => i.id === incident.id);
+      if (idx >= 0) {
+        this.cityWorld.incidents[idx] = incident;
+        this.notifyListeners();
+      }
+    });
+  }
+
+  public async syncFromBackend() {
+    try {
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
+      const res = await fetch(`${API_BASE}/v1/incidents?limit=50`);
+      if (res.ok) {
+        const data = await res.json();
+        const backendIncidents: Incident[] = data?.data || data?.incidents || [];
+        if (Array.isArray(backendIncidents) && backendIncidents.length > 0) {
+          backendIncidents.forEach((bInc) => {
+            const idx = this.cityWorld.incidents.findIndex((i) => i.id === bInc.id);
+            if (idx >= 0) {
+              this.cityWorld.incidents[idx] = bInc;
+            } else {
+              this.cityWorld.incidents.unshift(bInc);
+            }
+          });
+          this.notifyListeners();
+        }
+      }
+    } catch {
+      // Graceful fallback if backend server is not running
+    }
   }
 
   /** Pre-populate baseline activity and alerts from seed data */

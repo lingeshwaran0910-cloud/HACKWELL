@@ -15,7 +15,6 @@ import {
   Loader2,
   ArrowRight,
 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from '../components/common/ThemeToggle';
 
 interface FileItem {
@@ -55,7 +54,6 @@ const SOURCE_TYPES = [
 
 export const ReportEmergencyPage: React.FC = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
 
   // Form State
   const [incidentType, setIncidentType] = useState<string>('Medical Emergency');
@@ -73,7 +71,8 @@ export const ReportEmergencyPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isLocating, setIsLocating] = useState<boolean>(false);
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
-  const [createdIncident, setCreatedIncident] = useState<BackendReport | null>(null);
+  const [createdReport, setCreatedReport] = useState<BackendReport | null>(null);
+  const [createdIncident, setCreatedIncident] = useState<{ id: string; title: string; status: string; priority: { score: number }; severity: number } | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
 
@@ -198,7 +197,10 @@ export const ReportEmergencyPage: React.FC = () => {
           type: f.type,
         })),
       });
-      setCreatedIncident(result.report);
+      setCreatedReport(result.report);
+      if (result.incident) {
+        setCreatedIncident(result.incident);
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to submit report. Please try again.';
       setSubmitError(msg);
@@ -208,6 +210,7 @@ export const ReportEmergencyPage: React.FC = () => {
   };
 
   const handleResetForm = () => {
+    setCreatedReport(null);
     setCreatedIncident(null);
     setDescription('');
     setEvidenceFiles([]);
@@ -244,7 +247,7 @@ export const ReportEmergencyPage: React.FC = () => {
         </div>
 
         {/* SUCCESS STATE BANNER */}
-        {createdIncident ? (
+        {createdReport ? (
           <div className="bg-white dark:bg-[#0b1329] border border-emerald-500/40 rounded-2xl p-6 shadow-lg space-y-4">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-2xl">
@@ -252,59 +255,65 @@ export const ReportEmergencyPage: React.FC = () => {
               </div>
               <div>
                 <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 block uppercase tracking-wider">
-                  Success Confirmation
+                  REPORT RECEIVED — Incident: {createdIncident?.id || createdReport.id} — Status: NEW
                 </span>
                 <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                  ✓ Emergency report created successfully
+                  ✓ Emergency report created and ingested successfully
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Incident <strong className="font-mono text-blue-600 dark:text-blue-400">{createdIncident.id}</strong> has been ingested and dispatched to the live emergency network.
+                  Incident <strong className="font-mono text-blue-600 dark:text-blue-400">{createdIncident?.id || createdReport.id}</strong> has been created and dispatched to the live emergency network.
                 </p>
               </div>
             </div>
 
             <div className="p-4 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
               <div>
-                <span className="text-[10px] uppercase font-semibold text-slate-400 block">Public Reference ID</span>
+                <span className="text-[10px] uppercase font-semibold text-slate-400 block">Incident ID</span>
                 <strong className="text-blue-600 dark:text-blue-400 font-mono font-bold">
-                  PUB-{createdIncident.id.replace(/[^0-9]/g, '') || '001'}
+                  {createdIncident?.id || createdReport.id}
                 </strong>
               </div>
               <div>
                 <span className="text-[10px] uppercase font-semibold text-slate-400 block">Incident Type</span>
-                <strong className="text-slate-900 dark:text-slate-100 font-semibold">{createdIncident.type}</strong>
+                <strong className="text-slate-900 dark:text-slate-100 font-semibold">{createdReport.type}</strong>
               </div>
               <div>
                 <span className="text-[10px] uppercase font-semibold text-slate-400 block">Severity & Status</span>
                 <span className="font-semibold text-amber-600 dark:text-amber-400">
-                  Severity {createdIncident.severity} • {createdIncident.status}
+                  Severity {createdReport.severity} • NEW
                 </span>
               </div>
               <div>
                 <span className="text-[10px] uppercase font-semibold text-slate-400 block">Target Coordinates</span>
                 <span className="font-mono text-slate-700 dark:text-slate-300">
-                  {createdIncident.location.lat.toFixed(4)}° N, {createdIncident.location.lng.toFixed(4)}° E
+                  {createdReport.location.lat.toFixed(4)}° N, {createdReport.location.lng.toFixed(4)}° E
                 </span>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
               <button
+                onClick={() => navigate(`/?selectedIncidentId=${createdIncident?.id || createdReport.id}`)}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition-colors shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <span>View in Command Center</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                onClick={() => navigate(`/incidents/${createdIncident?.id || createdReport.id}`)}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-semibold transition-colors shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <span>View in Incidents Queue</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+
+              <button
                 onClick={handleResetForm}
                 className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
               >
-                Submit Another Emergency Report
+                Submit Another Report
               </button>
-
-              {!isAuthenticated && (
-                <button
-                  onClick={() => navigate('/login')}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition-colors shadow-xs cursor-pointer flex items-center gap-1.5"
-                >
-                  <span>Officer Login</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              )}
             </div>
           </div>
         ) : (
