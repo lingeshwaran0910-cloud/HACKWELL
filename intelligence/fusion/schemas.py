@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 
 class ResponseRequirement(BaseModel):
-    priority: Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"] = Field(..., description="Operational response priority level")
+    priority: Literal["NONE", "LOW", "MEDIUM", "HIGH", "CRITICAL"] = Field(..., description="Operational response priority level")
     recommendedResponseTypes: List[Literal["AMBULANCE", "FIRE_RESCUE", "POLICE_TRAFFIC"]] = Field(
         default_factory=list,
         description="Recommended emergency resource types for human operator review",
@@ -28,7 +28,7 @@ class FusedIncidentAssessment(BaseModel):
     evidenceQuality: Literal["HIGH", "MEDIUM", "LOW"] = Field(
         ..., description="Technical quality of supporting visual and sensory observations"
     )
-    severity: Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"] = Field(
+    severity: Literal["NONE", "LOW", "MEDIUM", "HIGH", "CRITICAL"] = Field(
         ..., description="Deterministic incident severity rating"
     )
     suspectedEventTimeSec: Optional[float] = Field(

@@ -4,7 +4,7 @@ Recommends emergency response configurations for human operator review without a
 """
 
 from typing import List, Dict, Any
-from schemas import ResponseRequirement
+from fusion.schemas import ResponseRequirement
 
 
 def determine_response_requirement(

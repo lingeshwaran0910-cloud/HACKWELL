@@ -7,7 +7,7 @@ import json
 import logging
 from typing import Optional, Dict, Any, List
 
-from schemas import GeminiVideoAnalysis
+from gemini.schemas import GeminiVideoAnalysis
 
 logger = logging.getLogger("GeminiClient")
 logger.setLevel(logging.INFO)

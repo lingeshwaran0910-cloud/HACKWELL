@@ -28,3 +28,12 @@ yarn-error.log*
 *.pem
 .idea
 .vscode
+
+# Python & Models & Database
+__pycache__/
+*.pyc
+*.pyo
+*.pt
+*.db
+*.sqlite
+

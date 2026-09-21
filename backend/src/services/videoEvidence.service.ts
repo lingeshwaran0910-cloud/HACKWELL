@@ -13,12 +13,16 @@ import { logger } from '../config/logger';
  * Defaults to localhost:8001 (the unified main_service.py).
  * Set PYTHON_INTELLIGENCE_URL in .env to override.
  */
-const PYTHON_SERVICE_URL = process.env.PYTHON_INTELLIGENCE_URL || 'http://localhost:8001';
+const PYTHON_SERVICE_URL = process.env.PYTHON_INTELLIGENCE_URL || 'http://127.0.0.1:8001';
 const PIPELINE_TIMEOUT_MS = 120_000; // 2 minutes — allow for large video processing
 
 export interface VideoAnalysisResult {
   evidence: Evidence;
   fusedAssessment: Record<string, unknown>;
+  scene?: Record<string, unknown>;
+  incident?: Record<string, unknown>;
+  modelResults?: Record<string, unknown>;
+  explanation?: string;
   incidentId: string | null;
 }
 
@@ -128,6 +132,10 @@ export class VideoEvidenceService {
     return {
       evidence: mapEvidenceFromDb(await prisma.evidence.findUniqueOrThrow({ where: { id: evidenceId } })),
       fusedAssessment: fused,
+      scene: pipelineResponse.scene as Record<string, unknown> | undefined,
+      incident: pipelineResponse.incident as Record<string, unknown> | undefined,
+      modelResults: pipelineResponse.model_results as Record<string, unknown> | undefined,
+      explanation: pipelineResponse.explanation as string | undefined,
       incidentId,
     };
   }

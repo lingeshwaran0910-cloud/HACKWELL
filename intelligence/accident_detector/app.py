@@ -10,12 +10,12 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from schemas import (
+from accident_detector.schemas import (
     AccidentDetectionResponse,
     VideoAnalysisFileRequest,
 )
-from detector import AccidentDetector
-from video_processor import VideoValidationError, VideoProcessingError
+from accident_detector.detector import AccidentDetector
+from accident_detector.video_processor import VideoValidationError, VideoProcessingError
 
 # Set up logging
 logging.basicConfig(

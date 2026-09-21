@@ -66,6 +66,10 @@ export class EvidenceController {
         data: {
           evidence: result.evidence,
           fusedAssessment: result.fusedAssessment,
+          scene: result.scene,
+          incident: result.incident,
+          modelResults: result.modelResults,
+          explanation: result.explanation,
           incidentId: result.incidentId,
           incidentCreated: result.incidentId !== null,
         },

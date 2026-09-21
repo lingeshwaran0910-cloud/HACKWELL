@@ -6,7 +6,7 @@ from typing import List, Dict, Tuple, Optional
 import math
 import numpy as np
 
-from schemas import (
+from vision.schemas import (
     BoundingBox,
     DetectedObject,
     ObjectPersistence,

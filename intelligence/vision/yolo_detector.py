@@ -11,14 +11,14 @@ from typing import List, Dict, Optional, Tuple, Set
 import numpy as np
 import cv2
 
-from schemas import (
+from vision.schemas import (
     BoundingBox,
     DetectedObject,
     FrameObservation,
     AggregatedVisualEvidence,
     VisionModelInfo,
 )
-from tracker import SpatialTemporalTracker
+from vision.tracker import SpatialTemporalTracker
 
 logger = logging.getLogger("YOLODetector")
 logger.setLevel(logging.INFO)

@@ -22,11 +22,11 @@ router.post(
   '/video',
   (req, res, next) => {
     // Multer error handling: size limit, mime type, etc.
-    videoUpload.single('video')(req, res, (err) => {
+    videoUpload.single('video')(req, res, (err: unknown) => {
       if (err) {
         res.status(400).json({
           success: false,
-          error: err.message || 'File upload failed',
+          error: (err as Error).message || 'File upload failed',
         });
         return;
       }

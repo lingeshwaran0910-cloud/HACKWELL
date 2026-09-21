@@ -7,13 +7,13 @@ import logging
 from typing import Dict, Any, List, Optional, Tuple
 import numpy as np
 
-from schemas import (
+from accident_detector.schemas import (
     AccidentDetectionResponse,
     ModelInfo,
     VideoMetadata,
     ProcessingInfo,
 )
-from video_processor import VideoProcessor, VideoValidationError, VideoProcessingError
+from accident_detector.video_processor import VideoProcessor, VideoValidationError, VideoProcessingError
 
 logger = logging.getLogger("AccidentDetector")
 logger.setLevel(logging.INFO)
@@ -45,14 +45,17 @@ class AccidentDetector:
 
         logger.info(f"Loading pretrained model '{self.model_name}' from HuggingFace...")
         try:
-            from transformers import AutoImageProcessor, AutoModelForVideoClassification
+            from transformers import AutoImageProcessor, VideoMAEImageProcessor, AutoModelForVideoClassification
             import torch
 
             try:
                 self._processor = AutoImageProcessor.from_pretrained(self.model_name)
             except Exception as proc_err:
-                logger.info(f"Image processor not in repo, loading VideoMAE processor fallback: {proc_err}")
-                self._processor = AutoImageProcessor.from_pretrained("MCG-NJU/videomae-base")
+                logger.info(f"Image processor not in repo, attempting VideoMAE fallback: {proc_err}")
+                try:
+                    self._processor = VideoMAEImageProcessor.from_pretrained("MCG-NJU/videomae-base")
+                except Exception:
+                    self._processor = None
 
             self._model = AutoModelForVideoClassification.from_pretrained(self.model_name)
             self._model.eval()

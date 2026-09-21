@@ -9,8 +9,8 @@ from typing import List, Optional
 import numpy as np
 import cv2
 
-from schemas import GeminiVideoAnalysis
-from client import GeminiClient
+from gemini.schemas import GeminiVideoAnalysis
+from gemini.client import GeminiClient
 
 logger = logging.getLogger("GeminiVideoAnalyzer")
 logger.setLevel(logging.INFO)

@@ -13,10 +13,10 @@ from typing import Dict, Any, List, Optional, Tuple
 # Allow running from the fusion directory
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from schemas import FusedIncidentAssessment, ResponseRequirement
-from credibility import evaluate_evidence_quality, evaluate_credibility
-from severity import evaluate_severity
-from rules import determine_response_requirement
+from fusion.schemas import FusedIncidentAssessment, ResponseRequirement
+from fusion.credibility import evaluate_evidence_quality, evaluate_credibility
+from fusion.severity import evaluate_severity
+from fusion.rules import determine_response_requirement
 
 logger = logging.getLogger("EvidenceFusion")
 logger.setLevel(logging.INFO)
@@ -240,9 +240,23 @@ def fuse_evidence(
         "severity_reasons": severity_reasons,
     }
 
+    # ── Incident Type Classification ───────────────────────────────────────
+    if not is_incident:
+        incident_type = "none"
+    elif fire_observed or smoke_observed:
+        incident_type = "fire_smoke"
+    elif road_blocked and collision_prob < 0.4:
+        incident_type = "road_obstruction"
+    elif people_count >= 5 and vehicle_count == 0 and collision_prob < 0.4:
+        incident_type = "crowd_incident"
+    elif collision_prob >= 0.4 or overturned or gemini_collision or vehicle_count >= 1:
+        incident_type = "vehicle_collision"
+    else:
+        incident_type = "other_emergency"
+
     return FusedIncidentAssessment(
         incidentDetected=incident_detected,  # type: ignore
-        incidentType="vehicle_collision" if is_incident else "no_collision",
+        incidentType=incident_type,
         confidence=confidence,
         modelScore=round(collision_prob, 4),
         credibility=credibility,  # type: ignore
