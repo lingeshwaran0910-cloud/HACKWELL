@@ -14,6 +14,7 @@ import { LiveMapPage } from './pages/LiveMapPage';
 import { ResourcesPage } from './pages/ResourcesPage';
 import { HospitalsPage } from './pages/HospitalsPage';
 import { IntelligencePage } from './pages/IntelligencePage';
+import { VideoAnalysisPage } from './pages/VideoAnalysisPage';
 import { SimulationPage } from './pages/SimulationPage';
 import { SystemActivityPage } from './pages/SystemActivityPage';
 import { ReportEmergencyPage } from './pages/ReportEmergencyPage';
@@ -92,6 +93,14 @@ export const App: React.FC = () => {
                 element={
                   <ProtectedRoute>
                     <IntelligencePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/video-analysis"
+                element={
+                  <ProtectedRoute>
+                    <VideoAnalysisPage />
                   </ProtectedRoute>
                 }
               />

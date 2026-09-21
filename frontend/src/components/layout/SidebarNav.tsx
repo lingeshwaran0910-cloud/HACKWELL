@@ -16,6 +16,7 @@ import {
   ChevronRight,
   User,
   LogOut,
+  Video,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -75,6 +76,11 @@ export const SidebarNav: React.FC = () => {
       path: '/intelligence',
       label: 'Intelligence',
       icon: <BrainCircuit className="w-4 h-4 shrink-0" />,
+    },
+    {
+      path: '/video-analysis',
+      label: 'Video Analysis',
+      icon: <Video className="w-4 h-4 shrink-0 text-purple-400" />,
     },
     {
       path: '/simulation',
